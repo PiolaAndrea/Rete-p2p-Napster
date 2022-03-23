@@ -1,2 +1,3 @@
 #Questo è il file della directory
-hashbhcsbhcs
+gsaDG A
+DJHQAE
