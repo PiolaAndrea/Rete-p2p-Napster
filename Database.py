@@ -2,6 +2,7 @@
 import psycopg2
 
 try:
+
     connection = psycopg2.connect(user="postgres",
                                   password="admin",
                                   host="127.0.0.1",
@@ -16,6 +17,7 @@ try:
     
 except (Exception, psycopg2.Error) as error:
     print("Error while fetching data from PostgreSQL", error)
+
 finally:
     # closing database connection.
     if connection:
