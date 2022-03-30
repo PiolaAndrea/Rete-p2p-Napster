@@ -22,18 +22,19 @@ def Menu():
 
 class Metodi:
     def Login(ip):
-            p = randint(50000,52000)
+            p = randint(50001,52000)
             pacchetto = 'LOGI'+ip+ str(p) 
             return pacchetto
 
-    def Aggiungi(sessionId, filename):   
+    def Aggiungi(sessionId, filename, path):   
             file = open('%s/%s' %(path,filename), 'rb')
             contenuto = file.read()
-            md5 = str(hashlib.md5(contenuto).digest())
+            md5 = str(hashlib.md5(contenuto).hexdigest())
             lunghezza = len(filename)
             for i in range (100-lunghezza):
-                filename = 'Z' + filename
-            return ('AADF'+sessionId+md5+filename)
+                filename = '|' + filename
+            return ('ADDF'+sessionId+md5+filename)
+
 
     def Rimuovi(sessionId, md5):
             pacchetto = 'DELF' + sessionId + md5
@@ -58,7 +59,7 @@ class L_File:
         self.n_copie = n_copie
 
 def CalcolaIp():
-    ipIn = '1.1.1.8'#s.getsockname()[0]
+    ipIn = '1.1.1.26'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -69,29 +70,42 @@ def CalcolaIp():
         ip += split[i]+'.'
     return ip [0:15]
 
-while True:
-    selezione = Menu()
+
+def openSocketConnection():      
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((hostname, int(porta)))
+    return s
+
+while True:
+    selezione = Menu()
 
     if(selezione == '1'):
-        pacchetto = Metodi.Login(CalcolaIp())
-        s.send(pacchetto.encode())
-        sessionId = s.recv(4096).decode()[4:20]
         if(sessionId == '0000000000000000'):
-            print('Errore nel login si prega di riprovare')
-        else:
-            print('Login effettuato con successo, il tuo SessioId è: ', sessionId)
-
-    elif(selezione == '2'):       
-        for filename in os.listdir(path):
-            pacchetto = Metodi.Aggiungi(sessionId, filename)
-            print(pacchetto)
+            s = openSocketConnection()    #apro connessione con la socket
+            pacchetto = Metodi.Login(CalcolaIp())
             s.send(pacchetto.encode())
-            n_copie = s.recv(4096).decode()[4:7]
-            print('Il file %s ha %s copie' %(filename, n_copie))
+            sessionId = s.recv(4096).decode()[4:20]
+            if(sessionId == '0000000000000000'):
+                print('Errore nel login si prega di riprovare')
+            else:
+                print('Login effettuato con successo, il tuo SessionId è: ', sessionId)
+            s.close()        #chiudo connessione con la socket
+        else:
+            print('Login già effettuato')
 
-            
+    elif(selezione == '2'):
+        if(sessionId != '0000000000000000'):       
+            for filename in os.listdir(path):
+                s = openSocketConnection()     #apro connessione con la socket
+                pacchetto = Metodi.Aggiungi(sessionId, filename, path)
+                s.send(pacchetto.encode())
+                n_copie = s.recv(4096).decode()[4:7].replace("X", "")
+                print('Il file %s ha %s copie' %(filename, n_copie))
+            s.close()        #chiudo connessione con la socket
+        else:
+            print("È necessario prima fare il login")
+
+     
     elif(selezione == '3'):
         a=0
 
@@ -104,8 +118,8 @@ while True:
     elif(selezione == '6'):
         a=0
 
-    s.close()
 
+        
 def CalcolaIp():
     ipIn = '1.1.1.1'
     split = ipIn.split('.')
