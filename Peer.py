@@ -105,7 +105,7 @@ while True:
         else:
             print("È necessario prima fare il login")
 
-            
+     
     elif(selezione == '3'):
         a=0
 
@@ -119,7 +119,7 @@ while True:
         a=0
 
 
-
+        
 def CalcolaIp():
     ipIn = '1.1.1.1'
     split = ipIn.split('.')
