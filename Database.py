@@ -1,30 +1,25 @@
-#Database
 import psycopg2
 
 try:
-    connection = psycopg2.connect(user="sysadmin",
-                                  password="pynative@#29",
+    connection = psycopg2.connect(user="postgres",
+                                  password="admin",
                                   host="127.0.0.1",
                                   port="5432",
-                                  database="postgres_db")
+                                  database="progettop2p")
     cursor = connection.cursor()
-    postgreSQL_select_Query = "select * from mobile"
 
-    cursor.execute(postgreSQL_select_Query)
-    print("Selecting rows from mobile table using cursor.fetchall")
-    mobile_records = cursor.fetchall()
+    query = "CREATE TABLE FILE(nome varchar(100), md5 varchar(32), ipP2P varchar(15), pP2P int, PRIMARY KEY (md5, ipP2P))"    
+    cursor.execute(query)
+    query = "CREATE TABLE PEER(ipP2P varchar(15), pP2P int, SessionID varchar(16), PRIMARY KEY (ipP2P))"
+    cursor.execute(query)
+    query = "CREATE TABLE LOG(idLOG SERIAL, ipP2P varchar(15), pP2P int, SessionID varchar(16), operazione varchar(20), data varchar(30), PRIMARY KEY (idLOG))"
+    cursor.execute(query)
 
-    print("Print each row and it's columns values")
-    for row in mobile_records:
-        print("Id = ", row[0], )
-        print("Model = ", row[1])
-        print("Price  = ", row[2], "\n")
-
+    connection.commit()     #conferma e salva modifiche sul db
+    
 except (Exception, psycopg2.Error) as error:
     print("Error while fetching data from PostgreSQL", error)
-
 finally:
-    # closing database connection.
     if connection:
         cursor.close()
         connection.close()

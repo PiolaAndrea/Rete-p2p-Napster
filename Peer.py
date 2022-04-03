@@ -36,7 +36,6 @@ class Metodi:
                 filename = '|' + filename
             return ('ADDF'+sessionId+md5+filename)
 
-
     def Rimuovi(sessionId, nomeFile):
             file = open('%s/%s' %(path,filename), 'rb')
             contenuto = file.read()
