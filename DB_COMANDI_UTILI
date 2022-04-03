@@ -27,3 +27,7 @@ sudo apt install python3-psycopg2
 sudo apt install python3-pip
 pip install psycopg2-binary
 
+
+//in caso di login errati di hamachi
+sudo /etc/init.d/logmein-hamachi force-reload
+
