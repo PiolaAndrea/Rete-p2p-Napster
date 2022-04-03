@@ -9,6 +9,7 @@ porta = sys.argv[2]
 hostname = sys.argv[1]
 path = sys.argv[3]
 sessionId = '0000000000000000'
+nomi_File = []
 
 def Menu():
     print('Menù di scelta:')
@@ -22,25 +23,33 @@ def Menu():
 
 class Metodi:
     def Login(ip):
-            p = randint(50000,52000)
+            p = randint(50001,52000)
             pacchetto = 'LOGI'+ip+ str(p) 
             return pacchetto
 
-    def Aggiungi(sessionId, filename):   
+    def Aggiungi(sessionId, filename, path):   
             file = open('%s/%s' %(path,filename), 'rb')
             contenuto = file.read()
-            md5 = str(hashlib.md5(contenuto).digest())
+            md5 = str(hashlib.md5(contenuto).hexdigest())
             lunghezza = len(filename)
             for i in range (100-lunghezza):
-                filename = 'Z' + filename
-            return ('AADF'+sessionId+md5+filename)
+                filename = '|' + filename
+            return ('ADDF'+sessionId+md5+filename)
 
-    def Rimuovi(sessionId, md5):
+
+    def Rimuovi(sessionId, nomeFile):
+            file = open('%s/%s' %(path,filename), 'rb')
+            contenuto = file.read()
+            md5 = str(hashlib.md5(contenuto).hexdigest())
             pacchetto = 'DELF' + sessionId + md5
             return pacchetto
 
-    def Ricerca():
-            pacchetto = 1
+    def Ricerca(sessionId, ricerca):
+            lunghezza = len(ricerca)
+            for i in range (100-lunghezza):
+                ricerca = '|' + ricerca
+            pacchetto = 'FIND' + sessionId + ricerca
+            return pacchetto
 
     def Download():
             pacchetto = 1
@@ -58,7 +67,7 @@ class L_File:
         self.n_copie = n_copie
 
 def CalcolaIp():
-    ipIn = '1.1.1.8'#s.getsockname()[0]
+    ipIn = '6.152.35.12'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -69,59 +78,86 @@ def CalcolaIp():
         ip += split[i]+'.'
     return ip [0:15]
 
-while True:
-    selezione = Menu()
+
+def openSocketConnection():      
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((hostname, int(porta)))
+    return s
+
+while True:
+    selezione = Menu()
 
     if(selezione == '1'):
-        pacchetto = Metodi.Login(CalcolaIp())
-        s.send(pacchetto.encode())
-        sessionId = s.recv(4096).decode()[4:20]
         if(sessionId == '0000000000000000'):
-            print('Errore nel login si prega di riprovare')
-        else:
-            print('Login effettuato con successo, il tuo SessioId è: ', sessionId)
-
-    elif(selezione == '2'):       
-        for filename in os.listdir(path):
-            pacchetto = Metodi.Aggiungi(sessionId, filename)
-            print(pacchetto)
+            s = openSocketConnection()    #apro connessione con la socket
+            pacchetto = Metodi.Login(CalcolaIp())
             s.send(pacchetto.encode())
-            n_copie = s.recv(4096).decode()[4:7]
-            print('Il file %s ha %s copie' %(filename, n_copie))
+            sessionId = s.recv(4096).decode()[4:20]
+            if(sessionId == '0000000000000000'):
+                print('Errore nel login si prega di riprovare')
+            else:
+                print('Login effettuato con successo, il tuo SessionId è: ', sessionId)
+            s.close()        #chiudo connessione con la socket
+        else:
+            print('Login già effettuato')
 
-            
+    elif(selezione == '2'):
+        if(sessionId != '0000000000000000'):       
+            for filename in os.listdir(path):
+                nomi_File.append(filename)
+                s = openSocketConnection()     #apro connessione con la socket
+                pacchetto = Metodi.Aggiungi(sessionId, filename, path)
+                s.send(pacchetto.encode())
+                n_copie = s.recv(4096).decode()[4:7].replace("X", "")
+                print('Il file %s ha %s copie' %(filename, n_copie))
+            s.close()        #chiudo connessione con la socket
+        else:
+            print("È necessario prima fare il login")
+
+     
     elif(selezione == '3'):
-        a=0
+        if(sessionId != '0000000000000000'):   
+            nome_File = input('Inserire il nome del file da eliminare: ')    
+            if (nome_File in nomi_File):                #CONTROLLARE FILE NON PRESENTI NELLA PROPRIA CARTELLA
+                s = openSocketConnection()     #apro connessione con la socket
+                pacchetto = Metodi.Rimuovi(sessionId, nome_File)
+                s.send(pacchetto.encode())
+                n_copie = s.recv(4096).decode()[4:7].replace("X", "")
+                print('Il file %s ha %s copie nel database' %(nome_File, n_copie))
+                s.close()        #chiudo connessione con la socket
+            else:
+                print('Non hai messo a disposizione nessun file denominato', nome_File)
+        else:
+            print("È necessario prima fare il login")
+
 
     elif(selezione == '4'):
-        a=0
+        if(sessionId != '0000000000000000'):   
+            ricerca = input('Inserire il nome del file da ricercare: ')    
+            s = openSocketConnection()     #apro connessione con la socket
+            pacchetto = Metodi.Ricerca(sessionId, ricerca)
+            s.send(pacchetto.encode())
+            #n_copie = s.recv(4096).decode()[4:7].replace("X", "")      CONTROLLARE RICERCA DI PIU' BYTE
+            #print('Il file %s ha %s copie nel database' %(nome_File, n_copie))
+            s.close()        #chiudo connessione con la socket
+        else:
+            print("È necessario prima fare il login")
+
 
     elif(selezione == '5'):
         a=0
 
     elif(selezione == '6'):
-        a=0
-
-    s.close()
-
-def CalcolaIp():
-    ipIn = '1.1.1.1'
-    split = ipIn.split('.')
-    ip = ""
-    for i in range (len(split)):
-        if len(split[i]) == 2:
-            split[i] = 'A' + split[i][0] + split[i][1]
-        elif len(split[i]) == 1:
-            split[i] = 'AA' + split[i][0]
-        ip += split[i]+'.'
-    return ip [0:15]
-
-pacchetto = Metodi.Login(CalcolaIp())
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((hostname, int(porta)))
-s.send(pacchetto.encode())
-risposta = s.recv(4096).decode()
-print(risposta)
-s.close()
+        if(sessionId != '0000000000000000'):
+            s = openSocketConnection() 
+            pacchetto = Metodi.Logout(sessionId)
+            s.send(pacchetto.encode())
+            n_file = s.recv(4096).decode()[4:7].replace('X','')
+            print('Logout effettuato con successo, sono stati rimossi %s file' %(n_file))
+            s.close()
+            exit(0)
+        else:
+            print("È necessario prima fare il login")
+    
+    else:
+        print("Errore nell' inserimento dell' istruzione")
