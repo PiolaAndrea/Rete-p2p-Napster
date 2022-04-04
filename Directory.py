@@ -53,8 +53,8 @@ class DB:
             caratteriDaSostituire = "()' "
             for row in cursor.fetchall():
                 for carattere in caratteriDaSostituire:
-                    row = db.replace(carattere, "")
-                dbRow.Append(row)
+                    row = str(row).replace(carattere, "")
+                dbRow.append(row)
             connection.commit()     #conferma e salva modifiche sul db
             if connection:
                 cursor.close()
@@ -69,20 +69,9 @@ class DB:
         
 
 class Metodi:
-    def CalcolaIp(ipIn):
-        split = ipIn.split('.')
-        ip = ""
-        for i in range (len(split)):
-            if len(split[i]) == 2:
-                split[i] = 'A' + split[i][0] + split[i][1]
-            elif len(split[i]) == 1:
-                split[i] = 'AA' + split[i][0]
-            ip += split[i]+'.'
-        return ip [0:15]
 
     def Login(pacchetto):
         ipP2P = pacchetto[4:19]
-        ipP2P = ipP2P.replace("A", "")    #sostituisco 
         pP2P = pacchetto[19:24]
         length_of_string = 16
         while True:
@@ -131,22 +120,29 @@ class Metodi:
         risultati = DB.queryRicerca(query)
         files = []
         for row in risultati:
-            risultato = row.Split(",")
+            risultato = row.split(",")
             files.append(L_File(risultato[1], risultato[0], risultato[2], risultato[3]))
         query = "Select DISTINCT md5 from file where nome LIKE '%" + ricerca + "%'"
-        idmd5 = str(DB.queryDb(query))
-        while(len(idmd5) < 3):         #riempio gli eventuali bytes mancanti
-            idmd5 = "|" + idmd5
+        idmd5 = DB.queryDb(query)
         pacchetti = []
-        for file in files:
-            filename = file.nome
-            while(len(filename) < 100):         #riempio gli eventuali bytes mancanti
-                filename = "|" + filename
-            ipP2P = file.ipP2P
-            ipP2P = Metodi.CalcolaIp(ipP2P)
-            pacchetto.append('AFIN'+file.md5+filename+ipP2P+file.pP2P)
-            
-
+        if idmd5 > 0:
+            idmd5 = str(idmd5)
+            while(len(idmd5) < 3):         #riempio gli eventuali bytes mancanti
+                idmd5 = "0" + idmd5
+            for file in files:
+                filename = file.nome
+                while(len(filename) < 100):         #riempio gli eventuali bytes mancanti
+                    filename = "|" + filename
+                query = "Select * from file where md5 = '%s'" %(file.md5)
+                nCopie = str(DB.queryDb(query))
+                while(len(nCopie) < 3):         #riempio gli eventuali bytes mancanti
+                    nCopie = "X" + nCopie
+                pacchetti.append('AFIN'+idmd5+file.md5+filename+nCopie+file.ipP2P+file.pP2P)
+            return pacchetti
+        elif idmd5 == 0:
+            idmd5 = "000"
+            pacchetti.append('AFIN'+idmd5)
+            return pacchetti
 
 
     def Rimozione(pacchetto):
@@ -178,9 +174,9 @@ class Metodi:
             nFileEliminati = str(DB.queryDb(query))     #ritorno numero file Eliminati
             query = "Delete from peer where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND pp2p = (Select pp2p from peer where sessionid = '%s')" %(SessionID, SessionID)
             query = []
-            query.append("Delete from peer where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND pp2p = (Select pp2p from peer where sessionid = '%s')" %(SessionID, SessionID))
             data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
             query.append("INSERT INTO log (ipp2p, pp2p, sessionid, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), (Select pp2p from peer where sessionid = '%s'), '%s', 'logout', '%s')" %(SessionID, SessionID, SessionID, data))
+            query.append("Delete from peer where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND pp2p = (Select pp2p from peer where sessionid = '%s')" %(SessionID, SessionID))
             for i in range(len(query)):    #eseguo query in successione
                 DB.queryDb(query[i])
             while(len(nFileEliminati) < 3):     #riempio gli eventuali bytes mancanti
@@ -193,7 +189,7 @@ class Metodi:
 if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind(("", 50000))
+    s.bind(("", 80))
     s.listen(10)
 
     while True:
@@ -216,7 +212,11 @@ if __name__ == "__main__":
             conn.send(risposta.encode())
 
         elif richiesta == "FIND":
-            Metodi.Ricerca(pacchetto)
+            risposte = Metodi.Ricerca(pacchetto)
+            for risposta in risposte:
+                print(str(risposta))
+                conn.send(str(risposta).encode())
+            
 
         elif richiesta == "DELF":
             risposta = Metodi.Rimozione(pacchetto)
