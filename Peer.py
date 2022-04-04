@@ -131,7 +131,7 @@ while True:
 
 
     elif(selezione == '4'):
-        if(sessionId != '0000000000000000'):   
+        if(sessionId != '0000000000000000'):
             ricerca = input('Inserire il nome del file da ricercare: ')
             if ricerca != "" and len(ricerca) <= 20:    
                 s = openSocketConnection()     #apro connessione con la socket
