@@ -10,6 +10,7 @@ hostname = sys.argv[1]
 path = sys.argv[3]
 sessionId = '0000000000000000'
 nomi_File = []
+files = []
 
 def Menu():
     print('Menù di scelta:')
@@ -37,7 +38,7 @@ class Metodi:
             return ('ADDF'+sessionId+md5+filename)
 
     def Rimuovi(sessionId, nomeFile):
-            file = open('%s/%s' %(path,filename), 'rb')
+            file = open('%s/%s' %(path,nomeFile), 'rb')
             contenuto = file.read()
             md5 = str(hashlib.md5(contenuto).hexdigest())
             pacchetto = 'DELF' + sessionId + md5
@@ -45,7 +46,7 @@ class Metodi:
 
     def Ricerca(sessionId, ricerca):
             lunghezza = len(ricerca)
-            for i in range (100-lunghezza):
+            for i in range (20-lunghezza):
                 ricerca = '|' + ricerca
             pacchetto = 'FIND' + sessionId + ricerca
             return pacchetto
@@ -58,15 +59,14 @@ class Metodi:
             return pacchetto
 
 class L_File:
-    def __init__(self, nome, md5, ipP2P, pP2P, n_copie):
-        self.nome = nome
+    def __init__(self, md5, nome, ipP2P, pP2P):
         self.md5 = md5
+        self.nome = nome
         self.ipP2P = ipP2P
         self.pP2P = pP2P
-        self.n_copie = n_copie
 
 def CalcolaIp():
-    ipIn = '6.152.35.12'#s.getsockname()[0]
+    ipIn = '126.152.135.123'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -131,14 +131,30 @@ while True:
 
 
     elif(selezione == '4'):
-        if(sessionId != '0000000000000000'):   
-            ricerca = input('Inserire il nome del file da ricercare: ')    
-            s = openSocketConnection()     #apro connessione con la socket
-            pacchetto = Metodi.Ricerca(sessionId, ricerca)
-            s.send(pacchetto.encode())
-            #n_copie = s.recv(4096).decode()[4:7].replace("X", "")      CONTROLLARE RICERCA DI PIU' BYTE
-            #print('Il file %s ha %s copie nel database' %(nome_File, n_copie))
-            s.close()        #chiudo connessione con la socket
+        if(sessionId != '0000000000000000'):
+            ricerca = input('Inserire il nome del file da ricercare: ')
+            if ricerca != "" and len(ricerca) <= 20:    
+                s = openSocketConnection()     #apro connessione con la socket
+                pacchetto = Metodi.Ricerca(sessionId, ricerca)
+                s.send(pacchetto.encode())
+                risposte = []
+                while True:
+                    buffer = s.recv(162)
+                    if not buffer: break 
+                    else:
+                        risposte.append(buffer.decode()) 
+                s.close()        #chiudo connessione con la socket
+                if risposte[0][4:7] == "000":      #controllo campo idmd5
+                    print("La ricerca non ha prodotto risultati")
+                else:
+                    files = []
+                    for i in range (len(risposte)):
+                        files.append(L_File(risposte[i][7:39], risposte[i][39:139].replace("|", ""), risposte[i][142:157], risposte[i][157:162]))
+                    print("La ricerca ha prodotto questi risultati:")
+                    for i in range (len(files)):
+                        print("Nome: %s || Md5: %s || ipP2P: %s || pP2P: %s" %(files[i].nome, files[i].md5, files[i].ipP2P, files[i].pP2P))
+            else:
+                print("Hai inserito una stringa vuota o troppo lunga")
         else:
             print("È necessario prima fare il login")
 
