@@ -5,6 +5,16 @@ import random
 import psycopg2
 from datetime import datetime
 
+
+class L_File:
+    def __init__(self, md5, nome, ipP2P, pP2P):
+        self.md5 = md5
+        self.nome = nome
+        self.ipP2P = ipP2P
+        self.pP2P = pP2P
+    
+
+
 class DB:
     def queryDb(query):
         try:
@@ -29,8 +39,47 @@ class DB:
                 cursor.close()
                 connection.close()
                 return rowaffected
+    
+    def queryRicerca(query):
+        try:
+            dbRow = []
+            connection = psycopg2.connect(user="postgres",
+                                  password="admin",
+                                  host="127.0.0.1",
+                                  port="5432",
+                                  database="progettop2p")
+            cursor = connection.cursor()
+            cursor.execute(query)
+            caratteriDaSostituire = "()' "
+            for row in cursor.fetchall():
+                for carattere in caratteriDaSostituire:
+                    row = db.replace(carattere, "")
+                dbRow.Append(row)
+            connection.commit()     #conferma e salva modifiche sul db
+            if connection:
+                cursor.close()
+                connection.close()
+                return dbRow    #ritorno elenco risultati
+        except (Exception, psycopg2.Error) as error:
+            print("Error while fetching data from PostgreSQL", error)
+            if connection:
+                cursor.close()
+                connection.close()
+                return dbRow
+        
 
 class Metodi:
+    def CalcolaIp(ipIn):
+        split = ipIn.split('.')
+        ip = ""
+        for i in range (len(split)):
+            if len(split[i]) == 2:
+                split[i] = 'A' + split[i][0] + split[i][1]
+            elif len(split[i]) == 1:
+                split[i] = 'AA' + split[i][0]
+            ip += split[i]+'.'
+        return ip [0:15]
+
     def Login(pacchetto):
         ipP2P = pacchetto[4:19]
         ipP2P = ipP2P.replace("A", "")    #sostituisco 
@@ -74,7 +123,32 @@ class Metodi:
                 return str(DB.queryDb(query))         #ritorno numero copie con lo stesso identificativo md5
         else:
             return 'err'
-        
+
+    def Ricerca(pacchetto):
+        SessionID = pacchetto[4:20]
+        ricerca = pacchetto[20:40].replace("|", "")
+        query = "Select * from file where nome LIKE '%" + ricerca + "%'"
+        risultati = DB.queryRicerca(query)
+        files = []
+        for row in risultati:
+            risultato = row.Split(",")
+            files.append(L_File(risultato[1], risultato[0], risultato[2], risultato[3]))
+        query = "Select DISTINCT md5 from file where nome LIKE '%" + ricerca + "%'"
+        idmd5 = str(DB.queryDb(query))
+        while(len(idmd5) < 3):         #riempio gli eventuali bytes mancanti
+            idmd5 = "|" + idmd5
+        pacchetti = []
+        for file in files:
+            filename = file.nome
+            while(len(filename) < 100):         #riempio gli eventuali bytes mancanti
+                filename = "|" + filename
+            ipP2P = file.ipP2P
+            ipP2P = Metodi.CalcolaIp(ipP2P)
+            pacchetto.append('AFIN'+file.md5+filename+ipP2P+file.pP2P)
+            
+
+
+
     def Rimozione(pacchetto):
         SessionID = pacchetto[4:20]
         md5 = pacchetto[20:52]
@@ -142,7 +216,7 @@ if __name__ == "__main__":
             conn.send(risposta.encode())
 
         elif richiesta == "FIND":
-            a = 1
+            Metodi.Ricerca(pacchetto)
 
         elif richiesta == "DELF":
             risposta = Metodi.Rimozione(pacchetto)
