@@ -116,6 +116,7 @@ class Metodi:
     def Ricerca(pacchetto):
         SessionID = pacchetto[4:20]
         ricerca = pacchetto[20:40].replace("|", "")
+        #aggiungere controlli sessionID e log
         query = "Select * from file where nome LIKE '%" + ricerca + "%'"
         risultati = DB.queryRicerca(query)
         files = []
