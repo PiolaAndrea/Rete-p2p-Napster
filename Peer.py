@@ -37,7 +37,7 @@ class Metodi:
             return ('ADDF'+sessionId+md5+filename)
 
     def Rimuovi(sessionId, nomeFile):
-            file = open('%s/%s' %(path,filename), 'rb')
+            file = open('%s/%s' %(path,nomeFile), 'rb')
             contenuto = file.read()
             md5 = str(hashlib.md5(contenuto).hexdigest())
             pacchetto = 'DELF' + sessionId + md5
@@ -132,13 +132,16 @@ while True:
 
     elif(selezione == '4'):
         if(sessionId != '0000000000000000'):   
-            ricerca = input('Inserire il nome del file da ricercare: ')    
-            s = openSocketConnection()     #apro connessione con la socket
-            pacchetto = Metodi.Ricerca(sessionId, ricerca)
-            s.send(pacchetto.encode())
-            #n_copie = s.recv(4096).decode()[4:7].replace("X", "")      CONTROLLARE RICERCA DI PIU' BYTE
-            #print('Il file %s ha %s copie nel database' %(nome_File, n_copie))
-            s.close()        #chiudo connessione con la socket
+            while True:
+                ricerca = input('Inserire il nome del file da ricercare: ')
+                if len(ricerca) <= 20:    
+                    s = openSocketConnection()     #apro connessione con la socket
+                    pacchetto = Metodi.Ricerca(sessionId, ricerca)
+                    s.send(pacchetto.encode())
+                    #n_copie = s.recv(4096).decode()[4:7].replace("X", "")      CONTROLLARE RICERCA DI PIU' BYTE
+                    #print('Il file %s ha %s copie nel database' %(nome_File, n_copie))
+                    s.close()        #chiudo connessione con la socket
+                    break
         else:
             print("È necessario prima fare il login")
 
