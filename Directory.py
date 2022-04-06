@@ -6,14 +6,6 @@ import psycopg2
 from datetime import datetime
 
 
-class L_File:
-    def __init__(self, md5, nome, ipP2P, pP2P):
-        self.md5 = md5
-        self.nome = nome
-        self.ipP2P = ipP2P
-        self.pP2P = pP2P
-    
-
 
 class DB:
     def queryDb(query):
@@ -82,7 +74,7 @@ class Metodi:
         query = []
         query.append("INSERT INTO peer (ipp2p, pp2p, sessionid) VALUES('%s', '%s', '%s')" %(ipP2P, pP2P, SessionID))
         data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
-        query.append("INSERT INTO log (ipp2p, pp2p, sessionid, operazione, data) VALUES('%s', '%s', '%s', 'login', '%s')" %(ipP2P, pP2P, SessionID, data))
+        query.append("INSERT INTO log (ipp2p, operazione, data) VALUES('%s', 'login', '%s')" %(ipP2P, data))
         for i in range(len(query)):
             if(DB.queryDb(query[i]) != 1):       #se le query danno errori
                 SessionID = '0000000000000000'
@@ -97,53 +89,80 @@ class Metodi:
         query = "select * from peer where sessionid = '%s'" %(SessionID)
         if(DB.queryDb(query) == 1):     #se il sessionid è presente
             data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
-            query = "INSERT INTO log (ipp2p, pp2p, sessionid, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), (Select pp2p from peer where sessionid = '%s'), '%s', 'aggiunta', '%s')" %(SessionID, SessionID, SessionID, data)
+            query = "INSERT INTO log (ipp2p, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), 'aggiunta', '%s')" %(SessionID, data)
             DB.queryDb(query)
-            query = "UPDATE file set nome = '%s' where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND md5 = '%s'" %(filename, SessionID, md5)
+            query = "UPDATE file set filename = '%s' where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND md5 = '%s'" %(filename, SessionID, md5)
             if(DB.queryDb(query) == 0):    #se non esiste gia' un file con lo stesso identificativo md5 aggiunto da quel peer
-                query = "INSERT INTO file (nome, md5, ipp2p, pp2p) VALUES('%s', '%s', (Select ipp2p from peer where sessionid = '%s'), (Select pp2p from peer where sessionid = '%s'))" %(filename, md5, SessionID, SessionID)
+                query = "INSERT INTO file (filename, md5, ipp2p) VALUES('%s', '%s', (Select ipp2p from peer where sessionid = '%s'))" %(filename, md5, SessionID)
                 if(DB.queryDb(query) == 1):    #se è stato inserito correttamente il file nel db
                     query = "Select * from file where md5 = '%s'" %(md5)
-                    return str(DB.queryDb(query))    #ritorno numero copie con lo stesso identificativo md5
+                    nCopie = str(DB.queryDb(query))    #ritorno numero copie con lo stesso identificativo md5
+                    while(len(nCopie) < 3):
+                        nCopie = "0" + nCopie
+                    risposta = "AADD" + nCopie
+                    return risposta
                 else:
-                    return 'err'
+                    return 'ERRO'
             else:
                 query = "Select * from file where md5 = '%s'" %(md5)
-                return str(DB.queryDb(query))         #ritorno numero copie con lo stesso identificativo md5
+                nCopie = str(DB.queryDb(query))    #ritorno numero copie con lo stesso identificativo md5
+                while(len(nCopie) < 3):
+                    nCopie = "0" + nCopie
+                risposta = "AADD" + nCopie
+                return risposta
         else:
-            return 'err'
+            return 'ERRO'
 
     def Ricerca(pacchetto):
         SessionID = pacchetto[4:20]
         ricerca = pacchetto[20:40].replace("|", "")
-        #aggiungere controlli sessionID e log
-        query = "Select * from file where nome LIKE '%" + ricerca + "%'"
-        risultati = DB.queryRicerca(query)
-        files = []
-        for row in risultati:
-            risultato = row.split(",")
-            files.append(L_File(risultato[1], risultato[0], risultato[2], risultato[3]))
-        query = "Select DISTINCT md5 from file where nome LIKE '%" + ricerca + "%'"
-        idmd5 = DB.queryDb(query)
-        pacchetti = []
-        if idmd5 > 0:
-            idmd5 = str(idmd5)
-            while(len(idmd5) < 3):         #riempio gli eventuali bytes mancanti
-                idmd5 = "0" + idmd5
-            for file in files:
-                filename = file.nome
-                while(len(filename) < 100):         #riempio gli eventuali bytes mancanti
-                    filename = "|" + filename
-                query = "Select * from file where md5 = '%s'" %(file.md5)
-                nCopie = str(DB.queryDb(query))
+        risposta = ""
+        query = "select * from peer where sessionid = '%s'" %(SessionID)
+        if(DB.queryDb(query) == 1):     #se il sessionid è presente
+            data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
+            query = "INSERT INTO log (ipp2p, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), 'ricerca', '%s')" %(SessionID, data)
+            DB.queryDb(query)
+            listFile = []
+            query = "Select DISTINCT (md5, filename) from file where filename LIKE '%" + ricerca + "%'"
+            listResult = DB.queryRicerca(query)
+            for file in listResult:
+                #print(file)
+                result = file.split(",")
+                listFile.append(result[0])
+                listFile.append(result[1])
+            idmd5 = len(listResult)
+            if len(str(idmd5)) == 2:
+                risposta = "AFIN0" + str(idmd5)
+            elif len(str(idmd5)) == 1:
+                risposta = "AFIN00" + str(idmd5)
+            i = 0
+            #print(len(listFile))
+            while i < len(listFile):
+                md5 = listFile[i]
+                #print(md5)
+                filename = listFile[i+1]
+                #print(filename)
+                query = "Select * from file where md5 = '%s' AND filename = '%s'" %(md5, filename)
+                nCopie = DB.queryDb(query)
+                nCopie = str(nCopie)
                 while(len(nCopie) < 3):         #riempio gli eventuali bytes mancanti
-                    nCopie = "X" + nCopie
-                pacchetti.append('AFIN'+idmd5+file.md5+filename+nCopie+file.ipP2P+file.pP2P)
-            return pacchetti
-        elif idmd5 == 0:
-            idmd5 = "000"
-            pacchetti.append('AFIN'+idmd5)
-            return pacchetti
+                    nCopie = "0" + nCopie
+                nome = filename
+                while(len(nome) < 100):         #riempio gli eventuali bytes mancanti
+                    nome = "|" + nome
+                risposta += md5 + nome + nCopie
+                query = "Select file.ipP2P, peer.pP2P from file, peer where peer.ipp2p = file.ipp2p AND file.md5 = '%s' AND file.filename = '%s'"%(md5, filename)
+                #print(query)
+                risultati = DB.queryRicerca(query)
+                for row in risultati:
+                    #print(row)
+                    risultato = row.split(",")
+                    ipP2P = risultato[0]
+                    pP2P = risultato[1]
+                    risposta += ipP2P+pP2P
+                i = i+2
+            return risposta
+        return "ERRO"
 
 
     def Rimozione(pacchetto):
@@ -153,17 +172,17 @@ class Metodi:
         if(DB.queryDb(query) == 1):     #se il sessionid è presente
             data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
             query = []
-            query.append("INSERT INTO log (ipp2p, pp2p, sessionid, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), (Select pp2p from peer where sessionid = '%s'), '%s', 'rimozione', '%s')" %(SessionID, SessionID, SessionID, data))
+            query.append("INSERT INTO log (ipp2p, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), 'rimozione', '%s')" %(SessionID, data))
             query.append("Delete from file where md5 = '%s' AND ipp2p = (Select ipp2p from peer where sessionid = '%s')"%(md5, SessionID))
             for i in range(len(query)):     #eseguo query in successione
                 DB.queryDb(query[i])
             query = "Select * from file where md5 = '%s'"%(md5)
             nCopie = str(DB.queryDb(query))      #ritorno numero copie con stesso identificativo md5
             while(len(nCopie) < 3):         #riempio gli eventuali bytes mancanti
-                nCopie = "X" + nCopie
+                nCopie = "0" + nCopie
             risposta = 'ADEL' + nCopie
             return risposta
-        return 'ADELerr'
+        return 'ERRO'
             
 
     
@@ -171,20 +190,20 @@ class Metodi:
         SessionID = pacchetto[4:20]
         query = "select * from peer where sessionid = '%s'" %(SessionID)
         if(DB.queryDb(query) == 1):     #se il sessionid è presente
-            query = "Delete from file where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND pp2p = (Select pp2p from peer where sessionid = '%s')" %(SessionID, SessionID)
+            query = "Delete from file where ipp2p = (Select ipp2p from peer where sessionid = '%s')" %(SessionID)
             nFileEliminati = str(DB.queryDb(query))     #ritorno numero file Eliminati
-            query = "Delete from peer where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND pp2p = (Select pp2p from peer where sessionid = '%s')" %(SessionID, SessionID)
+            #query = "Delete from peer where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND pp2p = (Select pp2p from peer where sessionid = '%s')" %(SessionID, SessionID)
             query = []
             data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
-            query.append("INSERT INTO log (ipp2p, pp2p, sessionid, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), (Select pp2p from peer where sessionid = '%s'), '%s', 'logout', '%s')" %(SessionID, SessionID, SessionID, data))
+            query.append("INSERT INTO log (ipp2p, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), 'logout', '%s')" %(SessionID, data))
             query.append("Delete from peer where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND pp2p = (Select pp2p from peer where sessionid = '%s')" %(SessionID, SessionID))
             for i in range(len(query)):    #eseguo query in successione
                 DB.queryDb(query[i])
             while(len(nFileEliminati) < 3):     #riempio gli eventuali bytes mancanti
-                nFileEliminati = "X" + nFileEliminati
+                nFileEliminati = "0" + nFileEliminati
             risposta = 'ALGO' + nFileEliminati
             return risposta
-        return 'ALGOerr'
+        return 'ERRO'
 
             
 if __name__ == "__main__":
@@ -205,18 +224,14 @@ if __name__ == "__main__":
             conn.send(risposta.encode())
 
         elif richiesta == "ADDF":
-            nCopie = Metodi.Aggiunta(pacchetto)
-            while(len(nCopie) < 3):
-                nCopie = "X" + nCopie
-            risposta = 'AADD' + nCopie
+            risposta = Metodi.Aggiunta(pacchetto)
             print(risposta)
             conn.send(risposta.encode())
 
         elif richiesta == "FIND":
-            risposte = Metodi.Ricerca(pacchetto)
-            for risposta in risposte:
-                print(str(risposta))
-                conn.send(str(risposta).encode())
+            risposta = Metodi.Ricerca(pacchetto)
+            print(risposta)
+            conn.send(risposta.encode())
             
 
         elif richiesta == "DELF":
