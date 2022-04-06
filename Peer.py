@@ -52,10 +52,17 @@ class Metodi:
             return pacchetto
 
     def Download():
-            pacchetto = 1
+        a = 1
+        """
+            while True:
+                buffer = s.recv(4096)
+                if not buffer: break 
+                else:
+                    risposta += buffer
+        """
 
     def Upload(md5):
-            pacchetto = 1
+        a = 1
 
     def Logout(sessionId):
             pacchetto = 'LOGO' + sessionId
@@ -69,7 +76,7 @@ class L_File:
         self.pP2P = pP2P
 
 def CalcolaIp():
-    ipIn = '104.152.104.112'#s.getsockname()[0]
+    ipIn = '104.152.104.119'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -99,7 +106,21 @@ def FiglioUpload():
             Metodi.Upload(fileMd5)
             sFiglio.close()
         
-
+def ScomponiRicerca(files):
+    k = 7
+    for i in range(int(risposta[4:7])):
+        md5 = risposta[k:k+32]
+        nome = risposta[k+32:k+132].replace("|", "")
+        y = k + 132
+        z = y + 3
+        for j in range(int(risposta[y:y+3])):    #mantengo y separata dalle altre variabili per non cambiare l'intestazione in fase di iterazione
+            ipP2P = risposta[z:z+15]
+            pP2P = risposta[z+15:z+20]
+            z += 20
+            file = L_File(md5, nome, ipP2P, pP2P)
+            files.append(file)
+        y = z      #sposto puntatore su ultimo carattere considerato
+        k = y
 
 while True:
     selezione = Menu()
@@ -170,19 +191,8 @@ while True:
                 if risposta[4:7] == "000":      #controllo campo idmd5
                     print("La ricerca non ha prodotto risultati")
                 else:
-                    print(risposta)
-                    k = 7
-                    for i in range(int(risposta[4:7])):
-                        file = L_File("","","","")
-                        file.md5 = risposta[k:k+32]
-                        file.nome = risposta[k+32:k+132].replace("|", "")
-                        y = 142
-                        for j in range(int(risposta[k+132:k+135])):
-                            file.ipP2P = risposta[y:y+15]
-                            file.pP2P = risposta[y+15:y+20]
-                            y += 20
-                            files.append(file)
-                        k+=y
+                    #print(risposta)
+                    ScomponiRicerca(files)
                 for file in files:
                     print("Nome: %s || Md5: %s || ipP2P: %s || pP2P: %s" %(file.nome, file.md5, file.ipP2P, file.pP2P))
             else:
@@ -192,7 +202,10 @@ while True:
 
 
     elif(selezione == '5'):
-        a=0
+        if(sessionId != '0000000000000000'):
+
+        else:
+            print("È necessario prima fare il login")
 
     elif(selezione == '6'):
         if(sessionId != '0000000000000000'):
