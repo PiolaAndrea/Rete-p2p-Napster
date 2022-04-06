@@ -4,6 +4,8 @@ import os
 from random import *
 import hashlib
 # -*- coding: utf-8 -*- 
+from signal import signal, SIGPIPE, SIG_DFL
+signal(SIGPIPE,SIG_DFL) 
 
 porta = sys.argv[2]
 hostname = sys.argv[1]
@@ -12,6 +14,8 @@ sessionId = '0000000000000000'
 nomi_File = []
 p = 0
 grandChunk = []
+for filename in os.listdir(path):
+    nomi_File.append(filename)
 
 def Menu():
     print('Menù di scelta:')
@@ -64,8 +68,8 @@ class Metodi:
     def Upload(md5):
         listMd5 = []
         pacchetto = "ARET"
-        for file in nomi_File:
-            listMd5.append(FindMd5(file))
+        for filename in nomi_File:
+            listMd5.append(FindMd5(path, filename))   
         indice = listMd5.index(md5)
         file = open('%s/%s' %(path,nomi_File[indice]), 'rb')
         contenuto = file.read()
@@ -89,7 +93,7 @@ class Metodi:
         for j in range(len(chunk)):
             pacchetto += grandChunk[j] + str(chunk[j]) 
         return pacchetto
-
+        
     def Logout(sessionId):
             pacchetto = 'LOGO' + sessionId
             return pacchetto
@@ -102,7 +106,7 @@ class L_File:
         self.pP2P = pP2P
 
 def CalcolaIp():
-    ipIn = '025.040.036.128'#s.getsockname()[0]
+    ipIn = '222.222.222.240'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -119,10 +123,10 @@ def openSocketConnection():
     s.connect((hostname, int(porta)))
     return s
 
-def FiglioUpload():
+def FiglioUpload(p):
     sFiglio = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sFiglio.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sFiglio.bind(("25.40.36.128", p))
+    sFiglio.bind(("", int(p)))
     sFiglio.listen(10)
     while True:
         conn, addr = sFiglio.accept()
@@ -132,7 +136,8 @@ def FiglioUpload():
             fileMd5 = pacchetto[4:36]
             pacchetto = Metodi.Upload(fileMd5)
             print(pacchetto)
-            sFiglio.send(pacchetto).encode()
+            pacchetto = pacchetto.encode()
+            sFiglio.send(pacchetto)
             sFiglio.close()
         
 def ScomponiRicerca(files,risposta):
@@ -158,6 +163,7 @@ while True:
         if(sessionId == '0000000000000000'):
             s = openSocketConnection()    #apro connessione con la socket
             pacchetto = Metodi.Login(CalcolaIp())
+            p = pacchetto[19:24]
             s.send(pacchetto.encode())
             sessionId = s.recv(4096).decode()[4:20]
             if(sessionId == '0000000000000000'):
@@ -166,15 +172,14 @@ while True:
                 print('Login effettuato con successo, il tuo SessionId è: ', sessionId)
                 pid = os.fork()
                 if pid == 0:
-                    FiglioUpload()
+                    FiglioUpload(p)
             s.close()        #chiudo connessione con la socket
         else:
             print('Login già effettuato')
 
     elif(selezione == '2'):
         if(sessionId != '0000000000000000'):       
-            for filename in os.listdir(path):
-                nomi_File.append(filename)
+            for filename in nomi_File:
                 s = openSocketConnection()     #apro connessione con la socket
                 pacchetto = Metodi.Aggiungi(sessionId, filename, path)
                 s.send(pacchetto.encode())
