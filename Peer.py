@@ -102,7 +102,7 @@ class L_File:
         self.pP2P = pP2P
 
 def CalcolaIp():
-    ipIn = '104.152.104.120'#s.getsockname()[0]
+    ipIn = '025.040.036.128'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -114,9 +114,9 @@ def CalcolaIp():
     return ip [0:15]
 
 
-def openSocketConnection(ip, port):      
+def openSocketConnection():      
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((ip, int(port)))
+    s.connect((hostname, int(porta)))
     return s
 
 def FiglioUpload():
@@ -153,7 +153,7 @@ while True:
 
     if(selezione == '1'):
         if(sessionId == '0000000000000000'):
-            s = openSocketConnection(hostname, p)    #apro connessione con la socket
+            s = openSocketConnection()    #apro connessione con la socket
             pacchetto = Metodi.Login(CalcolaIp())
             s.send(pacchetto.encode())
             sessionId = s.recv(4096).decode()[4:20]
@@ -172,7 +172,7 @@ while True:
         if(sessionId != '0000000000000000'):       
             for filename in os.listdir(path):
                 nomi_File.append(filename)
-                s = openSocketConnection(hostname, p)     #apro connessione con la socket
+                s = openSocketConnection()     #apro connessione con la socket
                 pacchetto = Metodi.Aggiungi(sessionId, filename, path)
                 s.send(pacchetto.encode())
                 n_copie = s.recv(4096).decode()[4:7].replace("X", "")
@@ -186,7 +186,7 @@ while True:
         if(sessionId != '0000000000000000'):   
             nome_File = input('Inserire il nome del file da eliminare: ')    
             if (nome_File in nomi_File):                #CONTROLLARE FILE NON PRESENTI NELLA PROPRIA CARTELLA
-                s = openSocketConnection(hostname, p)     #apro connessione con la socket
+                s = openSocketConnection()     #apro connessione con la socket
                 pacchetto = Metodi.Rimuovi(sessionId, nome_File)
                 s.send(pacchetto.encode())
                 n_copie = s.recv(4096).decode()[4:7].replace("X", "")
@@ -203,7 +203,7 @@ while True:
             files = []
             ricerca = input('Inserire il nome del file da ricercare: ')
             if ricerca != "" and len(ricerca) <= 20:    
-                s = openSocketConnection(hostname, p)     #apro connessione con la socket
+                s = openSocketConnection()     #apro connessione con la socket
                 pacchetto = Metodi.Ricerca(sessionId, ricerca)
                 s.send(pacchetto.encode())
                 risposta = bytes(0)
@@ -228,11 +228,12 @@ while True:
 
 
     elif(selezione == '5'):  
-        #if(sessionId != '0000000000000000'):
+        if(sessionId != '0000000000000000'):
             md5 = input("Inserire l'Md5 del file da scaricare")
             ip = input("Inserire l'indirizzo ip del peer da cui scaricare il file")
             port = input("Inserire porta del peer da cui scaricare il file")
-            s = openSocketConnection(ip, port)
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((ip, int(port)))
             pacchetto = "RETR" + md5
             s.send(pacchetto.encode())
             risposta = bytes(0)
@@ -243,12 +244,12 @@ while True:
                     risposta += buffer
             risposta = risposta.decode()
             print(risposta)
-        #else:
-            #print("È necessario prima fare il login")
+        else:
+            print("È necessario prima fare il login")
 
     elif(selezione == '6'):
         if(sessionId != '0000000000000000'):
-            s = openSocketConnection(hostname, p) 
+            s = openSocketConnection() 
             pacchetto = Metodi.Logout(sessionId)
             s.send(pacchetto.encode())
             n_file = s.recv(4096).decode()[4:7].replace('X','')
