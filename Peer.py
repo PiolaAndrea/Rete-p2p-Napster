@@ -23,7 +23,7 @@ def Menu():
     print('6) Logout')
     return input('Cosa si desidera fare? ')
 
-def FindMd5(filename):
+def FindMd5(path,filename):
     file = open('%s/%s' %(path,filename), 'rb')
     contenuto = file.read()
     file.close()
@@ -36,7 +36,7 @@ class Metodi:
         return pacchetto
 
     def Aggiungi(sessionId, filename, path):   
-        md5 = FindMd5(filename)
+        md5 = FindMd5(path,filename)
         lunghezza = len(filename)
         for i in range (100-lunghezza):
             filename = '|' + filename
@@ -122,14 +122,17 @@ def openSocketConnection():
 def FiglioUpload():
     sFiglio = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sFiglio.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sFiglio.bind(("", p))
+    sFiglio.bind(("25.40.36.128", p))
     sFiglio.listen(10)
     while True:
-        conn = sFiglio.accept()
+        conn, addr = sFiglio.accept()
         pacchetto = conn.recv(36).decode()
+        print(pacchetto)
         if pacchetto[0:4] == "RETR":
             fileMd5 = pacchetto[4:36]
-            Metodi.Upload(fileMd5)
+            pacchetto = Metodi.Upload(fileMd5)
+            print(pacchetto)
+            sFiglio.send(pacchetto).encode()
             sFiglio.close()
         
 def ScomponiRicerca(files,risposta):
