@@ -148,7 +148,7 @@ while True:
                 s.send(pacchetto.encode())
                 risposte = []
                 while True:
-                    buffer = s.recv(20)
+                    buffer = s.recv(162)
                     if not buffer: break 
                     else:
                         risposte.append(buffer.decode()) 
