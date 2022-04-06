@@ -1,9 +1,7 @@
-from fileinput import filename
 import socket
 import os
 import string
 import random
-from unittest import result
 import psycopg2
 from datetime import datetime
 
@@ -165,6 +163,7 @@ class Metodi:
                 i = i+2
             return risposta
         return "ERRO"
+
 
     def Rimozione(pacchetto):
         SessionID = pacchetto[4:20]
