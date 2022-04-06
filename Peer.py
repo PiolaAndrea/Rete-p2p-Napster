@@ -99,7 +99,8 @@ while True:
                     print('Errore nel login si prega di riprovare')
                 else:
                     print('Login effettuato con successo, il tuo SessionId è: ', sessionId)
-                s.close()        #chiudo connessione con la socket
+            else: print("Errore di trasmissione con il server")
+            s.close()        #chiudo connessione con la socket
         else:
             print('Login già effettuato')
 
@@ -115,6 +116,7 @@ while True:
                 identificativo = risposta[0:4]
                 if(identificativo == 'AADD'):
                     print('Il file %s ha %s copie' %(filename, n_copie))
+                else: print("Errore di trasmissione con il server")
                 s.close()        #chiudo connessione con la socket
         else:
             print("È necessario prima fare il login")
@@ -132,6 +134,7 @@ while True:
                 n_copie = risposta[4:7].replace("X", "")
                 if(identificativo == 'ADEL'):
                     print('Il file %s ha %s copie nel database' %(nome_File, n_copie))
+                else: print("Errore di trasmissione con il server")
                 s.close()        #chiudo connessione con la socket
             else:
                 print('Non hai messo a disposizione nessun file denominato', nome_File)
@@ -165,6 +168,7 @@ while True:
                         print("La ricerca ha prodotto questi risultati:")
                         for i in range (len(files)):
                             print("Nome: %s || Md5: %s || ipP2P: %s || pP2P: %s" %(files[i].nome, files[i].md5, files[i].ipP2P, files[i].pP2P))
+                else: print("Errore di trasmissione con il server")
             else:
                 print("Hai inserito una stringa vuota o troppo lunga")
         else:
@@ -184,6 +188,7 @@ while True:
             n_file = risposta[4:7].replace('X','')
             if(identificativo == 'ALGO'):
                 print('Logout effettuato con successo, sono stati rimossi %s file' %(n_file))
+            else: print("Errore di trasmissione con il server")
             s.close()
             exit(0)
         else:
