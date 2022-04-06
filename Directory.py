@@ -1,7 +1,9 @@
+from fileinput import filename
 import socket
 import os
 import string
 import random
+from unittest import result
 import psycopg2
 from datetime import datetime
 
@@ -106,25 +108,65 @@ class Metodi:
                     query = "Select * from file where md5 = '%s'" %(md5)
                     return str(DB.queryDb(query))    #ritorno numero copie con lo stesso identificativo md5
                 else:
-                    return 'err'
+                    return 'ERRO'
             else:
                 query = "Select * from file where md5 = '%s'" %(md5)
                 return str(DB.queryDb(query))         #ritorno numero copie con lo stesso identificativo md5
         else:
-            return 'err'
+            return 'ERRO'
 
     def Ricerca(pacchetto):
         SessionID = pacchetto[4:20]
         ricerca = pacchetto[20:40].replace("|", "")
+        risposta = ""
         #aggiungere controlli sessionID e log
-        query = "Select * from file where nome LIKE '%" + ricerca + "%'"
-        risultati = DB.queryRicerca(query)
-        files = []
-        for row in risultati:
-            risultato = row.split(",")
-            files.append(L_File(risultato[1], risultato[0], risultato[2], risultato[3]))
-        query = "Select DISTINCT md5 from file where nome LIKE '%" + ricerca + "%'"
-        idmd5 = DB.queryDb(query)
+        listFile = []
+        query = "Select DISTINCT (md5, nome) from file where nome LIKE '%" + ricerca + "%'"
+        listResult = DB.queryRicerca(query)
+        for file in listResult:
+            print(file)
+            result = file.split(",")
+            listFile.append(result[0])
+            listFile.append(result[1])
+        idmd5 = len(listResult)
+        if len(str(idmd5)) == 2:
+            risposta = "AFIN0" + str(idmd5)
+        elif len(str(idmd5)) == 1:
+            risposta = "AFIN00" + str(idmd5)
+        i = 0
+        for stringa in listFile:
+            print(stringa)
+        """
+        while i < (len(listFile)*2):
+            md5 = listFile[i]
+            print(md5)
+            filename = listFile[i+1]
+            print(filename)
+            query = "Select * from file where md5 = '%s' AND nome = '%s'" %(md5, filename)
+            nCopie = DB.queryDb(query)
+            nCopie = str(nCopie)
+            while(len(nCopie) < 3):         #riempio gli eventuali bytes mancanti
+                nCopie = "0" + nCopie
+            nome = filename
+            while(len(nome) < 100):         #riempio gli eventuali bytes mancanti
+                nome = "|" + nome
+            risposta += md5 + filename + nCopie
+            for j in range(int(nCopie)):
+                query = "Select ipP2P, pP2P from file where md5 = '%s' AND nome = '%s'"%(md5, filename)
+                risultati = DB.queryRicerca(query)
+                for row in risultati:
+                    risultato = row.split(",")
+                    ipP2P = risultato[0]
+                    pP2P = risultato[1]
+                risposta += ipP2P+pP2P
+            i = i + 2
+            """
+        return risposta
+
+
+
+
+        """
         pacchetti = []
         if idmd5 > 0:
             idmd5 = str(idmd5)
@@ -144,6 +186,7 @@ class Metodi:
             idmd5 = "000"
             pacchetti.append('AFIN'+idmd5)
             return pacchetti
+        """
 
 
     def Rimozione(pacchetto):
@@ -163,7 +206,7 @@ class Metodi:
                 nCopie = "X" + nCopie
             risposta = 'ADEL' + nCopie
             return risposta
-        return 'ADELerr'
+        return 'ERRO'
             
 
     
@@ -184,7 +227,7 @@ class Metodi:
                 nFileEliminati = "X" + nFileEliminati
             risposta = 'ALGO' + nFileEliminati
             return risposta
-        return 'ALGOerr'
+        return 'ERRO'
 
             
 if __name__ == "__main__":
@@ -213,10 +256,9 @@ if __name__ == "__main__":
             conn.send(risposta.encode())
 
         elif richiesta == "FIND":
-            risposte = Metodi.Ricerca(pacchetto)
-            for risposta in risposte:
-                print(str(risposta))
-                conn.send(str(risposta).encode())
+            risposta = Metodi.Ricerca(pacchetto)
+            print(risposta)
+            conn.send(risposta.encode())
             
 
         elif richiesta == "DELF":
