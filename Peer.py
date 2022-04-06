@@ -11,6 +11,7 @@ path = sys.argv[3]
 sessionId = '0000000000000000'
 nomi_File = []
 files = []
+p = 0
 
 def Menu():
     print('Menù di scelta:')
@@ -46,12 +47,15 @@ class Metodi:
 
     def Ricerca(sessionId, ricerca):
             lunghezza = len(ricerca)
-            for i in range (100-lunghezza):
+            for i in range (20-lunghezza):
                 ricerca = '|' + ricerca
             pacchetto = 'FIND' + sessionId + ricerca
             return pacchetto
 
     def Download():
+            pacchetto = 1
+
+    def Upload(md5):
             pacchetto = 1
 
     def Logout(sessionId):
@@ -66,7 +70,7 @@ class L_File:
         self.pP2P = pP2P
 
 def CalcolaIp():
-    ipIn = '6.152.35.12'#s.getsockname()[0]
+    ipIn = '104.152.104.107'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -83,6 +87,21 @@ def openSocketConnection():
     s.connect((hostname, int(porta)))
     return s
 
+def FiglioUpload():
+    sFiglio = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sFiglio.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sFiglio.bind(("", p))
+    sFiglio.listen(10)
+    while True:
+        conn = sFiglio.accept()
+        pacchetto = conn.recv(36).decode()
+        if pacchetto[0:4] == "RETR":
+            fileMd5 = pacchetto[4:36]
+            Metodi.Upload(fileMd5)
+            sFiglio.close()
+        
+
+
 while True:
     selezione = Menu()
 
@@ -96,6 +115,9 @@ while True:
                 print('Errore nel login si prega di riprovare')
             else:
                 print('Login effettuato con successo, il tuo SessionId è: ', sessionId)
+                pid = os.fork()
+                if pid == 0:
+                    FiglioUpload()
             s.close()        #chiudo connessione con la socket
         else:
             print('Login già effettuato')
@@ -131,25 +153,32 @@ while True:
 
 
     elif(selezione == '4'):
-        if(sessionId != '0000000000000000'):   
-            while True:
-                ricerca = input('Inserire il nome del file da ricercare: ')
-                if len(ricerca) <= 20:    
-                    s = openSocketConnection()     #apro connessione con la socket
-                    pacchetto = Metodi.Ricerca(sessionId, ricerca)
-                    s.send(pacchetto.encode())
-                    risposte = []
-                    while True:
-                        buffer = s.recv(4096)
-                        if not buffer: break 
-                        else:
-                            risposte.append(buffer.decode()) 
-                    s.close()        #chiudo connessione con la socket
+        if(sessionId != '0000000000000000'):
+            ricerca = input('Inserire il nome del file da ricercare: ')
+            if ricerca != "" and len(ricerca) <= 20:    
+                s = openSocketConnection()     #apro connessione con la socket
+                pacchetto = Metodi.Ricerca(sessionId, ricerca)
+                s.send(pacchetto.encode())
+                while True:
+                    buffer = s.recv(4096)
+                    if not buffer: break 
+                    else:
+                        risposta = buffer
+                s.close()        #chiudo connessione con la socket
+                if risposta[4:7] == "000":      #controllo campo idmd5
+                    print("La ricerca non ha prodotto risultati")
+                else:
+                    print(risposta)
+                    """
+                    files = []
                     for i in range (len(risposte)):
-                        files.append(L_File(risposte[i][7:39].replace("|", ""), risposte[i][39:139].replace("|", ""), risposte[i][142:157].replace("|", ""), risposte[i][157:162].replace("|", "")))
+                        files.append(L_File(risposte[i][7:39], risposte[i][39:139].replace("|", ""), risposte[i][142:157], risposte[i][157:162]))
                     print("La ricerca ha prodotto questi risultati:")
                     for i in range (len(files)):
-                        print("Md5: %s || Nome: %s || ipP2P: %s || pP2P: %s" %(files[i].md5, files[i].nome, files[i].ipP2p, files[i].pP2P))
+                        print("Nome: %s || Md5: %s || ipP2P: %s || pP2P: %s" %(files[i].nome, files[i].md5, files[i].ipP2P, files[i].pP2P))
+                    """
+            else:
+                print("Hai inserito una stringa vuota o troppo lunga")
         else:
             print("È necessario prima fare il login")
 
