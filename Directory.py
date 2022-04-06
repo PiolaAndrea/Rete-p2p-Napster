@@ -93,7 +93,7 @@ class Metodi:
             DB.queryDb(query)
             query = "UPDATE file set filename = '%s' where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND md5 = '%s'" %(filename, SessionID, md5)
             if(DB.queryDb(query) == 0):    #se non esiste gia' un file con lo stesso identificativo md5 aggiunto da quel peer
-                query = "INSERT INTO file (filename, md5, ipp2p) VALUES('%s', '%s', (Select ipp2p from peer where sessionid = '%s'))" %(filename, md5, SessionID)
+                query = "INSERT INTO file (filename, md5, ipp2p, nDownload) VALUES('%s', '%s', (Select ipp2p from peer where sessionid = '%s'), 0)" %(filename, md5, SessionID)
                 if(DB.queryDb(query) == 1):    #se è stato inserito correttamente il file nel db
                     query = "Select * from file where md5 = '%s'" %(md5)
                     nCopie = str(DB.queryDb(query))    #ritorno numero copie con lo stesso identificativo md5
@@ -184,8 +184,22 @@ class Metodi:
             return risposta
         return 'ERRO'
             
+    def Download(pacchetto):
+        SessionID = pacchetto[4:20]
+        md5 = pacchetto[20:52]
+        query = "select * from peer where sessionid = '%s'" %(SessionID)
+        if(DB.queryDb(query) == 1):     #se il sessionid è presente
+            data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
+            query = []
+            query.append("INSERT INTO log (ipp2p, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), 'download', '%s')" %(SessionID, data))
+            query.append("Update file set nDownload = nDownload + 1 where md5 = '%s' AND ipp2p = (Select ipp2p from peer where sessionid = '%s')"%(md5, SessionID))
+            for i in range(len(query)):     #eseguo query in successione
+                DB.queryDb(query[i])
+            query = ("Select nDownload from file where md5 = '%s' AND ipp2p = (Select ipp2p from peer where sessionid = '%s')"%(md5, SessionID))
+            nDownload = str(DB.queryRicerca(query))
+            risposta = "ARRE" + nDownload
+        return 'ERRO'
 
-    
     def Logout(pacchetto):
         SessionID = pacchetto[4:20]
         query = "select * from peer where sessionid = '%s'" %(SessionID)
@@ -233,9 +247,13 @@ if __name__ == "__main__":
             print(risposta)
             conn.send(risposta.encode())
             
-
         elif richiesta == "DELF":
             risposta = Metodi.Rimozione(pacchetto)
+            print(risposta)
+            conn.send(risposta.encode())
+
+        elif richiesta == "RREG":
+            risposta = Metodi.Download(pacchetto)
             print(risposta)
             conn.send(risposta.encode())
 
