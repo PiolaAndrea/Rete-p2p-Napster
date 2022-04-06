@@ -10,7 +10,6 @@ hostname = sys.argv[1]
 path = sys.argv[3]
 sessionId = '0000000000000000'
 nomi_File = []
-files = []
 p = 0
 
 def Menu():
@@ -70,7 +69,7 @@ class L_File:
         self.pP2P = pP2P
 
 def CalcolaIp():
-    ipIn = '104.152.104.107'#s.getsockname()[0]
+    ipIn = '104.152.104.112'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -154,29 +153,38 @@ while True:
 
     elif(selezione == '4'):
         if(sessionId != '0000000000000000'):
+            files = []
             ricerca = input('Inserire il nome del file da ricercare: ')
             if ricerca != "" and len(ricerca) <= 20:    
                 s = openSocketConnection()     #apro connessione con la socket
                 pacchetto = Metodi.Ricerca(sessionId, ricerca)
                 s.send(pacchetto.encode())
+                risposta = bytes(0)
                 while True:
                     buffer = s.recv(4096)
                     if not buffer: break 
                     else:
-                        risposta = buffer
+                        risposta += buffer
+                risposta = risposta.decode()
                 s.close()        #chiudo connessione con la socket
                 if risposta[4:7] == "000":      #controllo campo idmd5
                     print("La ricerca non ha prodotto risultati")
                 else:
                     print(risposta)
-                    """
-                    files = []
-                    for i in range (len(risposte)):
-                        files.append(L_File(risposte[i][7:39], risposte[i][39:139].replace("|", ""), risposte[i][142:157], risposte[i][157:162]))
-                    print("La ricerca ha prodotto questi risultati:")
-                    for i in range (len(files)):
-                        print("Nome: %s || Md5: %s || ipP2P: %s || pP2P: %s" %(files[i].nome, files[i].md5, files[i].ipP2P, files[i].pP2P))
-                    """
+                    k = 7
+                    for i in range(int(risposta[4:7])):
+                        file = L_File("","","","")
+                        file.md5 = risposta[k:k+32]
+                        file.nome = risposta[k+32:k+132].replace("|", "")
+                        y = 142
+                        for j in range(int(risposta[k+132:k+135])):
+                            file.ipP2P = risposta[y:y+15]
+                            file.pP2P = risposta[y+15:y+20]
+                            y += 20
+                            files.append(file)
+                        k+=y
+                for file in files:
+                    print("Nome: %s || Md5: %s || ipP2P: %s || pP2P: %s" %(file.nome, file.md5, file.ipP2P, file.pP2P))
             else:
                 print("Hai inserito una stringa vuota o troppo lunga")
         else:
