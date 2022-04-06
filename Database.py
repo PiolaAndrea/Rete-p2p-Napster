@@ -8,11 +8,11 @@ try:
                                   database="progettop2p")
     cursor = connection.cursor()
 
-    query = "CREATE TABLE FILE(nome varchar(100), md5 varchar(32), ipP2P varchar(15), pP2P int, PRIMARY KEY (md5, ipP2P))"    
+    query = "CREATE TABLE peer(ipP2P varchar(15), pP2P int, SessionID varchar(16), PRIMARY KEY (ipP2P))"
     cursor.execute(query)
-    query = "CREATE TABLE PEER(ipP2P varchar(15), pP2P int, SessionID varchar(16), PRIMARY KEY (ipP2P))"
+    query = "CREATE TABLE file(filename varchar(100), md5 varchar(32), ipP2P varchar(15), nDownload int, PRIMARY KEY (md5, ipP2P), FOREIGN KEY(ipP2P) references peer(ipP2P))"    
     cursor.execute(query)
-    query = "CREATE TABLE LOG(idLOG SERIAL, ipP2P varchar(15), pP2P int, SessionID varchar(16), operazione varchar(20), data varchar(30), PRIMARY KEY (idLOG))"
+    query = "CREATE TABLE log(idLOG SERIAL, ipP2P varchar(15), operazione varchar(20), data varchar(30), PRIMARY KEY (idLOG))"
     cursor.execute(query)
 
     connection.commit()     #conferma e salva modifiche sul db
