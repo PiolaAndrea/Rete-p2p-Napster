@@ -8,6 +8,7 @@ from threading import Thread
 #from signal import signal, SIGPIPE, SIG_DFL
 #signal(SIGPIPE,SIG_DFL) 
 
+
 porta = sys.argv[2]
 hostname = sys.argv[1]
 path = sys.argv[3]
