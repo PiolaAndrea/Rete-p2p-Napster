@@ -40,7 +40,7 @@ class L_File:
         self.pP2P = pP2P
 
 def CalcolaIp():
-    ipIn = '222.222.222.361'#s.getsockname()[0]
+    ipIn = '222.222.222.383'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -152,15 +152,15 @@ class Metodi:
 
 
 def ScomponiDownload(pacchetto):
-    print(len(pacchetto))
-    fd = os.open("fittizio.txt", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o777)
+    #print(len(pacchetto))
+    fd = os.open("fittizio.jpg", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o777)
     nChunk = int(pacchetto[4:10].decode())
-    print(nChunk)
+    #print(nChunk)
     i = 10
     for chunk in range(nChunk):
         lenchunk = pacchetto[i:i+5].decode()
         lenchunk = int(lenchunk)
-        print(lenchunk)
+        #print(lenchunk)
         i+=5          #sposto puntatore dopo la lenchunk
         buffer = pacchetto[i:i+lenchunk]
         os.write(fd, buffer)
@@ -182,7 +182,19 @@ def FiglioUpload(p):
             risposta = Metodi.Upload(fileMd5)
             #risposta = risposta.encode()
             #print(sys.getsizeof(risposta))
-            conn.sendall(risposta)
+            #conn.sendall(risposta)
+            
+            i = 0
+            lenBytes = len(risposta)
+            while True:
+                conn.send(risposta[i:i+4096])
+                lenBytes -= 4096
+                print(lenBytes)
+                i += 4096
+                if(lenBytes <= 4096):
+                    conn.send(risposta[i:i+lenBytes])
+                    break
+            
         conn.close()
         
 
