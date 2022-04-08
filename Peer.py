@@ -3,7 +3,6 @@ import sys
 import os
 from random import *
 import hashlib
-from threading import Thread
 # -*- coding: utf-8 -*- 
 
 
@@ -13,7 +12,6 @@ path = sys.argv[3]
 sessionId = '0000000000000000'
 nomi_File = []
 p = 0
-lenChunk = []
 for filename in os.listdir(path):
     nomi_File.append(filename)
 
@@ -42,7 +40,7 @@ class L_File:
         self.pP2P = pP2P
 
 def CalcolaIp():
-    ipIn = '222.222.222.336'#s.getsockname()[0]
+    ipIn = '222.222.222.361'#s.getsockname()[0]
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
@@ -124,20 +122,28 @@ class Metodi:
         while (len(str(nChunk))) < 6:
             nChunk = "0" + str(nChunk)
         pacchetto += nChunk.encode()
+        lenChunk = []
         chunk = []
-        i = 0
         lunghezzaContenuto = len(contenuto)
-        while lunghezzaContenuto-4096 > 0:
-            chunk.append(contenuto[i:i+4096])
-            i += 4096
-            lunghezzaContenuto -= 4096
-            lenChunk.append("04096")
-        chunk.append(contenuto)
-        while(len(str(lunghezzaContenuto)) < 5):     #riempio gli eventuali bytes mancanti
-            lunghezzaContenuto = "0" + str(lunghezzaContenuto)
-        lenChunk.append(lunghezzaContenuto)
+        nChunk = int(nChunk)
+        if(nChunk == 1):
+            while(len(str(lunghezzaContenuto)) < 5):     #riempio gli eventuali bytes mancanti
+                lunghezzaContenuto = "0" + str(lunghezzaContenuto)
+            lenChunk.append(lunghezzaContenuto)
+            chunk.append(contenuto)
+        else: 
+            ultimoChunk = lunghezzaContenuto % 4096
+            while(len(str(ultimoChunk)) < 5):     #riempio gli eventuali bytes mancanti
+                ultimoChunk = "0" + str(ultimoChunk)
+            i = 0
+            for c in range(nChunk-1):
+                lenChunk.append("04096")
+                chunk.append(contenuto[i:i+4096])
+                i += 4096
+            lenChunk.append(ultimoChunk)
+            chunk.append(contenuto[i:i+int(ultimoChunk)])
         for j in range(len(chunk)):
-            pacchetto += lenChunk[j].encode() + chunk[j] 
+            pacchetto += lenChunk[j].encode() + chunk[j]
         return pacchetto
         
     def Logout(sessionId):
@@ -146,7 +152,8 @@ class Metodi:
 
 
 def ScomponiDownload(pacchetto):
-    fd = os.open("fittizio.jpg", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o777)
+    print(len(pacchetto))
+    fd = os.open("fittizio.txt", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o777)
     nChunk = int(pacchetto[4:10].decode())
     print(nChunk)
     i = 10
@@ -174,8 +181,8 @@ def FiglioUpload(p):
             fileMd5 = pacchetto[4:36]
             risposta = Metodi.Upload(fileMd5)
             #risposta = risposta.encode()
-            print(risposta)
-            conn.send(risposta)
+            #print(sys.getsizeof(risposta))
+            conn.sendall(risposta)
         conn.close()
         
 
@@ -281,6 +288,7 @@ while True:
                 if not buffer: break 
                 else:
                     risposta += buffer
+                    #print(len(risposta))
             ScomponiDownload(risposta)
             #print(risposta)
             so.close()
