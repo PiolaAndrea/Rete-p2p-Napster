@@ -130,17 +130,24 @@ class MetodiDirectory:
     def Download(pacchetto):
         SessionID = pacchetto[4:20]
         md5 = pacchetto[20:52]
+        ipP2P = pacchetto[52:67]
         query = "select * from peer where sessionid = '%s'" %(SessionID)
         if(DB.queryDb(query) == 1):     #se il sessionid è presente
             data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
             query = []
             query.append("INSERT INTO log (ipp2p, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), 'download', '%s')" %(SessionID, data))
-            query.append("Update file set nDownload = nDownload + 1 where md5 = '%s' AND ipp2p = (Select ipp2p from peer where sessionid = '%s')"%(md5, SessionID))
+            query.append("Update file set nDownload = nDownload + 1 where md5 = '%s' AND ipp2p = '%s'"%(md5, ipP2P))
             for i in range(len(query)):     #eseguo query in successione
                 DB.queryDb(query[i])
-            query = ("Select nDownload from file where md5 = '%s' AND ipp2p = (Select ipp2p from peer where sessionid = '%s')"%(md5, SessionID))
+            query = ("Select nDownload from file where md5 = '%s' AND ipp2p = '%s'"%(md5, ipP2P))
             nDownload = str(DB.queryRicerca(query))
+            caratteriDaSostituire = "[]', "
+            for carattere in caratteriDaSostituire:
+                nDownload = nDownload.replace(carattere, "")
+            while(len(nDownload) < 3):     #riempio gli eventuali bytes mancanti
+                nDownload = "0" + nDownload
             risposta = "ARRE" + nDownload
+            return risposta
         return 'ERRO'
 
     def Logout(pacchetto):
