@@ -1,10 +1,8 @@
 import hashlib
 from random import *
-def FindMd5(path,filename):
-    file = open('%s/%s' %(path,filename), 'rb')
-    contenuto = file.read()
-    file.close()
-    return str(hashlib.md5(contenuto).hexdigest())
+from Utility import *
+
+
 class MetodiPeer:
     def Login(ip):
         p = randint(50001,52000)
