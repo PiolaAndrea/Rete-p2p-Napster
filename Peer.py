@@ -25,19 +25,14 @@ def FiglioUpload(p):
     while True:
         conn, addr = sFiglio.accept()
         pacchetto = conn.recv(36).decode()
-        #print(pacchetto)
         if pacchetto[0:4] == "RETR":
             fileMd5 = pacchetto[4:36]
             risposta = MetodiPeer.Upload(fileMd5, path, nomi_File)
-            #risposta = risposta.encode()
-            #print(sys.getsizeof(risposta))
-            #conn.sendall(risposta)
             i = 0
             lenBytes = len(risposta)
             while True:
                 conn.send(risposta[i:i+4096])
                 lenBytes -= 4096
-                #print(lenBytes)
                 i += 4096
                 if(lenBytes <= 4096):
                     conn.send(risposta[i:i+lenBytes])
@@ -92,6 +87,9 @@ while True:
             if (nome_File in nomi_File):                #CONTROLLARE FILE NON PRESENTI NELLA PROPRIA CARTELLA
                 s = openSocketConnection(hostname, porta)     #apro connessione con la socket
                 pacchetto = MetodiPeer.Rimuovi(sessionId, nome_File, path)
+                nomi_File.remove(nome_File)
+                for nome in nomi_File:
+                    print(nome)
                 s.send(pacchetto.encode())
                 risposta = s.recv(4096).decode()
                 s.close()        #chiudo connessione con la socket
@@ -100,7 +98,6 @@ while True:
                     print('Il file %s ha %s copie nel database' %(nome_File, str(n_copie)))
                 else:
                     print("Ops! Qualcosa è andato storto!")
-
             else:
                 print('Non hai messo a disposizione nessun file denominato', nome_File)
         else:
@@ -151,11 +148,9 @@ while True:
                 risposta = bytes(0)
                 while True:
                     buffer = so.recv(4096)
-                    #print(len(buffer))
                     if not buffer: break 
                     else:
                         risposta += buffer
-                        #print(len(risposta))
                 if risposta[0:4].decode() == "ARET":
                     while True:
                         filename = input("Come vuoi salvare il file [nome].[estensione]: ")
