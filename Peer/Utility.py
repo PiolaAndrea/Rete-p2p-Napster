@@ -3,13 +3,32 @@ import socket
 from random import *
 import hashlib
 
-
 class L_File:
     def __init__(self, md5, nome, ipP2P, pP2P):
         self.md5 = md5
         self.nome = nome
         self.ipP2P = ipP2P
         self.pP2P = pP2P
+
+def Menu():
+    print('Menù di scelta:')
+    print('1) Aggiunta')
+    print('2) Rimozione')
+    print('3) Ricerca')
+    print('4) Download')
+    print('5) Logout')
+    return input('Cosa si desidera fare? ')
+
+def CalcolaIp(ipIn):
+    split = ipIn.split('.')
+    ip = ""
+    for i in range (len(split)):
+        if len(split[i]) == 2:
+            split[i] = '0' + split[i][0] + split[i][1]
+        elif len(split[i]) == 1:
+            split[i] = '00' + split[i][0]
+        ip += split[i]+'.'
+    return ip [0:15]
 
 def FindMd5(path,filename):
     file = open('%s/%s' %(path,filename), 'rb')
@@ -22,16 +41,13 @@ def openSocketConnection(hostname, porta):
     s.connect((hostname, int(porta)))
     return s
 
-def ScomponiDownload(pacchetto, filename):
-    #print(len(pacchetto))
-    fd = os.open("/home/matteo/prova/" + filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o777)    #inserire path generico
+def ScomponiDownload(pacchetto, filename, path):
+    fd = os.open('%s/%s' %(path,filename), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o777)    #inserire path generico
     nChunk = int(pacchetto[4:10].decode())
-    #print(nChunk)
     i = 10
     for chunk in range(nChunk):
         lenchunk = pacchetto[i:i+5].decode()
         lenchunk = int(lenchunk)
-        #print(lenchunk)
         i+=5          #sposto puntatore dopo la lenchunk
         buffer = pacchetto[i:i+lenchunk]
         os.write(fd, buffer)
@@ -43,7 +59,7 @@ def ScomponiRicerca(risposta):
     files = []
     for i in range(int(risposta[4:7])):
         md5 = risposta[k:k+32]
-        nome = risposta[k+32:k+132].replace("|", "")
+        nome = risposta[k+32:k+132].strip()
         y = k + 132
         z = y + 3
         for j in range(int(risposta[y:y+3])):    #mantengo y separata dalle altre variabili per non cambiare l'intestazione in fase di iterazione
