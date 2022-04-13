@@ -49,3 +49,4 @@ if __name__ == "__main__":
             print(risposta)
             conn.send(risposta.encode())
         conn.close()
+
