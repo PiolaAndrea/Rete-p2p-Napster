@@ -3,15 +3,19 @@ import sys
 import os
 from random import *
 import hashlib
+from MetodiPeer import *
+from Utility import *
 # -*- coding: utf-8 -*- 
 
 porta = sys.argv[2]
 hostname = sys.argv[1]
-path = sys.argv[3]
+path = sys.argv[4]
+ipIn = sys.argv[3]
 sessionId = '0000000000000000'
 nomi_File = []
 p = 0
-grandChunk = []
+for filename in os.listdir(path):
+    nomi_File.append(filename)
 
 def Menu():
     print('Menù di scelta:')
@@ -23,163 +27,87 @@ def Menu():
     print('6) Logout')
     return input('Cosa si desidera fare? ')
 
-def FindMd5(path,filename):
-    file = open('%s/%s' %(path,filename), 'rb')
-    contenuto = file.read()
-    file.close()
-    return str(hashlib.md5(contenuto).hexdigest())
-
-class Metodi:
-    def Login(ip):
-        p = randint(50001,52000)
-        pacchetto = 'LOGI'+ip+ str(p) 
-        return pacchetto
-
-    def Aggiungi(sessionId, filename, path):   
-        md5 = FindMd5(path,filename)
-        lunghezza = len(filename)
-        for i in range (100-lunghezza):
-            filename = '|' + filename
-        return ('ADDF'+sessionId+md5+filename)
-
-    def Rimuovi(sessionId, nomeFile):
-        file = open('%s/%s' %(path,nomeFile), 'rb')
-        contenuto = file.read()
-        file.close()
-        md5 = str(hashlib.md5(contenuto).hexdigest())
-        pacchetto = 'DELF' + sessionId + md5
-        return pacchetto
-
-    def Ricerca(sessionId, ricerca):
-        lunghezza = len(ricerca)
-        for i in range (20-lunghezza):
-            ricerca = '|' + ricerca
-        pacchetto = 'FIND' + sessionId + ricerca
-        return pacchetto
-
-    def Download(md5):
-        pacchetto = "RETR" + md5
-        return pacchetto
-
-    def Upload(md5):
-        listMd5 = []
-        pacchetto = "ARET"
-        for file in nomi_File:
-            listMd5.append(FindMd5(file))
-        indice = listMd5.index(md5)
-        file = open('%s/%s' %(path,nomi_File[indice]), 'rb')
-        contenuto = file.read()
-        file.close()
-        modulo = len(contenuto) % 4096
-        if modulo > 0:
-            nChunk = int((len(contenuto)/4096)) + 1
-        else:
-            nChunk = int(len(contenuto)/4096)
-        pacchetto += str(nChunk)
-        chunk = []
-        i = 0
-        lunghezzaContenuto = len(contenuto)
-        while lunghezzaContenuto-4096 > 0:
-            chunk.append(contenuto[i:i+4096])
-            i += 4096
-            lunghezzaContenuto -= 4096
-            grandChunk.append("04096")
-        chunk.append(contenuto)
-        grandChunk.append(str(lunghezzaContenuto))
-        for j in range(len(chunk)):
-            pacchetto += grandChunk[j] + str(chunk[j]) 
-        return pacchetto
-
-    def Logout(sessionId):
-            pacchetto = 'LOGO' + sessionId
-            return pacchetto
-
-class L_File:
-    def __init__(self, md5, nome, ipP2P, pP2P):
-        self.md5 = md5
-        self.nome = nome
-        self.ipP2P = ipP2P
-        self.pP2P = pP2P
-
-def CalcolaIp():
-    ipIn = '025.040.036.128'#s.getsockname()[0]
+def CalcolaIp(ipIn):
     split = ipIn.split('.')
     ip = ""
     for i in range (len(split)):
         if len(split[i]) == 2:
-            split[i] = 'A' + split[i][0] + split[i][1]
+            split[i] = '0' + split[i][0] + split[i][1]
         elif len(split[i]) == 1:
-            split[i] = 'AA' + split[i][0]
+            split[i] = '00' + split[i][0]
         ip += split[i]+'.'
     return ip [0:15]
 
 
-def openSocketConnection():      
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((hostname, int(porta)))
-    return s
-
-def FiglioUpload():
+def FiglioUpload(p):
     sFiglio = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sFiglio.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sFiglio.bind(("25.40.36.128", p))
+    sFiglio.bind(("", int(p)))
     sFiglio.listen(10)
     while True:
         conn, addr = sFiglio.accept()
         pacchetto = conn.recv(36).decode()
-        print(pacchetto)
+        #print(pacchetto)
         if pacchetto[0:4] == "RETR":
             fileMd5 = pacchetto[4:36]
-            pacchetto = Metodi.Upload(fileMd5)
-            print(pacchetto)
-            sFiglio.send(pacchetto).encode()
-            sFiglio.close()
+            risposta = MetodiPeer.Upload(fileMd5, path, nomi_File)
+            #risposta = risposta.encode()
+            #print(sys.getsizeof(risposta))
+            #conn.sendall(risposta)
+            i = 0
+            lenBytes = len(risposta)
+            while True:
+                conn.send(risposta[i:i+4096])
+                lenBytes -= 4096
+                #print(lenBytes)
+                i += 4096
+                if(lenBytes <= 4096):
+                    conn.send(risposta[i:i+lenBytes])
+                    break
+        conn.close()
         
-def ScomponiRicerca(files,risposta):
-    k = 7
-    for i in range(int(risposta[4:7])):
-        md5 = risposta[k:k+32]
-        nome = risposta[k+32:k+132].replace("|", "")
-        y = k + 132
-        z = y + 3
-        for j in range(int(risposta[y:y+3])):    #mantengo y separata dalle altre variabili per non cambiare l'intestazione in fase di iterazione
-            ipP2P = risposta[z:z+15]
-            pP2P = risposta[z+15:z+20]
-            z += 20
-            file = L_File(md5, nome, ipP2P, pP2P)
-            files.append(file)
-        y = z      #sposto puntatore su ultimo carattere considerato
-        k = y
 
 while True:
     selezione = Menu()
 
     if(selezione == '1'):
         if(sessionId == '0000000000000000'):
-            s = openSocketConnection()    #apro connessione con la socket
-            pacchetto = Metodi.Login(CalcolaIp())
+            s = openSocketConnection(hostname, porta)    #apro connessione con la socket
+            pacchetto = MetodiPeer.Login(CalcolaIp(ipIn))
+            p = pacchetto[19:24]
             s.send(pacchetto.encode())
-            sessionId = s.recv(4096).decode()[4:20]
-            if(sessionId == '0000000000000000'):
-                print('Errore nel login si prega di riprovare')
-            else:
-                print('Login effettuato con successo, il tuo SessionId è: ', sessionId)
-                pid = os.fork()
-                if pid == 0:
-                    FiglioUpload()
+            risposta = s.recv(4096).decode()
+            sessionId = risposta[4:20]
             s.close()        #chiudo connessione con la socket
+            if(risposta[0:4] == "ALGI"):
+                if(sessionId == '0000000000000000'):
+                    print('Errore nel login si prega di riprovare')
+                else:
+                    print('Login effettuato con successo, il tuo SessionId è: ', sessionId)
+                    pid = os.fork()
+
+                    if pid == 0:
+                        FiglioUpload(p)
+            else:
+                print("Ops! Qualcosa è andato storto!")
         else:
             print('Login già effettuato')
 
     elif(selezione == '2'):
-        if(sessionId != '0000000000000000'):       
+        if(sessionId != '0000000000000000'): 
+            nomi_File = []      
             for filename in os.listdir(path):
                 nomi_File.append(filename)
-                s = openSocketConnection()     #apro connessione con la socket
-                pacchetto = Metodi.Aggiungi(sessionId, filename, path)
+                s = openSocketConnection(hostname, porta)     #apro connessione con la socket
+                pacchetto = MetodiPeer.Aggiungi(sessionId, filename, path)
                 s.send(pacchetto.encode())
-                n_copie = s.recv(4096).decode()[4:7].replace("X", "")
-                print('Il file %s ha %s copie' %(filename, n_copie))
+                risposta = s.recv(4096).decode()
+                n_copie = int(risposta[4:7])
+                if(risposta[0:4] == "AADD"):
+                    print('Il file %s ha %s copie' %(filename, str(n_copie)))
+                else:
+                    print("Ops! Qualcosa è andato storto!")
+   
             s.close()        #chiudo connessione con la socket
         else:
             print("È necessario prima fare il login")
@@ -189,12 +117,17 @@ while True:
         if(sessionId != '0000000000000000'):   
             nome_File = input('Inserire il nome del file da eliminare: ')    
             if (nome_File in nomi_File):                #CONTROLLARE FILE NON PRESENTI NELLA PROPRIA CARTELLA
-                s = openSocketConnection()     #apro connessione con la socket
-                pacchetto = Metodi.Rimuovi(sessionId, nome_File)
+                s = openSocketConnection(hostname, porta)     #apro connessione con la socket
+                pacchetto = MetodiPeer.Rimuovi(sessionId, nome_File, path)
                 s.send(pacchetto.encode())
-                n_copie = s.recv(4096).decode()[4:7].replace("X", "")
-                print('Il file %s ha %s copie nel database' %(nome_File, n_copie))
+                risposta = s.recv(4096).decode()
                 s.close()        #chiudo connessione con la socket
+                n_copie = int(risposta[4:7])
+                if(risposta[0:4] == "ADEL"):
+                    print('Il file %s ha %s copie nel database' %(nome_File, str(n_copie)))
+                else:
+                    print("Ops! Qualcosa è andato storto!")
+
             else:
                 print('Non hai messo a disposizione nessun file denominato', nome_File)
         else:
@@ -206,8 +139,8 @@ while True:
             files = []
             ricerca = input('Inserire il nome del file da ricercare: ')
             if ricerca != "" and len(ricerca) <= 20:    
-                s = openSocketConnection()     #apro connessione con la socket
-                pacchetto = Metodi.Ricerca(sessionId, ricerca)
+                s = openSocketConnection(hostname, porta)     #apro connessione con la socket
+                pacchetto = MetodiPeer.Ricerca(sessionId, ricerca)
                 s.send(pacchetto.encode())
                 risposta = bytes(0)
                 while True:
@@ -217,13 +150,16 @@ while True:
                         risposta += buffer
                 risposta = risposta.decode()
                 s.close()        #chiudo connessione con la socket
-                if risposta[4:7] == "000":      #controllo campo idmd5
-                    print("La ricerca non ha prodotto risultati")
+                if risposta[0:4] == "AFIN":
+                    if risposta[4:7] == "000":      #controllo campo idmd5
+                        print("La ricerca non ha prodotto risultati")
+                    else:
+                        files = ScomponiRicerca(risposta)
+                    for file in files:
+                        print("Nome: %s || Md5: %s || ipP2P: %s || pP2P: %s" %(file.nome, file.md5, file.ipP2P, file.pP2P))
                 else:
-                    #print(risposta)
-                    ScomponiRicerca(files, risposta)
-                for file in files:
-                    print("Nome: %s || Md5: %s || ipP2P: %s || pP2P: %s" %(file.nome, file.md5, file.ipP2P, file.pP2P))
+                    print("Ops! Qualcosa è andato storto!")
+
             else:
                 print("Hai inserito una stringa vuota o troppo lunga")
         else:
@@ -232,33 +168,61 @@ while True:
 
     elif(selezione == '5'):  
         if(sessionId != '0000000000000000'):
-            md5 = input("Inserire l'Md5 del file da scaricare")
-            ip = input("Inserire l'indirizzo ip del peer da cui scaricare il file")
-            port = input("Inserire porta del peer da cui scaricare il file")
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((ip, int(port)))
-            pacchetto = "RETR" + md5
-            s.send(pacchetto.encode())
+            md5 = input("Inserire l'Md5 del file da scaricare: ")
+            ip = input("Inserire l'indirizzo ip del peer da cui scaricare il file: ")
+            port = input("Inserire porta del peer da cui scaricare il file: ")
+            so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            so.connect((ip, int(port)))
+            pacchetto = MetodiPeer.Download(md5)
+            so.send(pacchetto.encode())
             risposta = bytes(0)
             while True:
-                buffer = s.recv(4096)
+                buffer = so.recv(4096)
+                #print(len(buffer))
                 if not buffer: break 
                 else:
                     risposta += buffer
-            risposta = risposta.decode()
-            print(risposta)
+                    #print(len(risposta))
+            if risposta[0:4].decode() == "ARET":
+                while True:
+                    filename = input("Come vuoi salvare il file [nome].[estensione]: ")
+                    exist = os.path.isfile('%s/%s' %(path,filename))     #inserire path generico
+                    if exist:
+                        print("Sembra che ci sia già un file con lo stesso nome")
+                    else:
+                        ScomponiDownload(risposta, filename, path)
+                        print("Il file è stato scaricato e salvato correttamente")
+                        s = openSocketConnection(hostname, porta)   #collegamento directory
+                        ip = CalcolaIp(ip)
+                        pacchetto = "RREG" + sessionId + md5 + ip + port          #ip deve essere 15 byte
+                        s.send(pacchetto.encode())
+                        risposta = s.recv(4096).decode()
+                        n_fileScaricati = int(risposta[4:7])
+                        if(risposta[0:4] == "ARRE"):
+                            print("Questo file è già stato scaricato %s volte" %(str(n_fileScaricati)))
+                        else:
+                            print("Ops! Qualcosa è andato storto!")
+                        s.close()
+                        break
+            else:
+                print("Ops! Qualcosa è andato storto!")
+            so.close()
         else:
             print("È necessario prima fare il login")
 
     elif(selezione == '6'):
         if(sessionId != '0000000000000000'):
-            s = openSocketConnection() 
-            pacchetto = Metodi.Logout(sessionId)
+            s = openSocketConnection(hostname, porta) 
+            pacchetto = MetodiPeer.Logout(sessionId)
             s.send(pacchetto.encode())
-            n_file = s.recv(4096).decode()[4:7].replace('X','')
-            print('Logout effettuato con successo, sono stati rimossi %s file' %(n_file))
+            risposta = s.recv(4096).decode()
+            n_file = int(risposta[4:7])
             s.close()
-            exit(0)
+            if risposta[0:4] == "ALGO":
+                print('Logout effettuato con successo, sono stati rimossi %s file' %(str(n_file)))
+                exit(0)
+            else:
+                print("Ops! Qualcosa è andato storto!")
         else:
             print("È necessario prima fare il login")
     
