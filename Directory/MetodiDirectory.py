@@ -28,7 +28,7 @@ class MetodiDirectory:
         SessionID = pacchetto[4:20]
         #SessionID = '6338084801094733'
         md5 = pacchetto[20:52]
-        filename = pacchetto[52:152].replace("|", "")
+        filename = pacchetto[52:152].strip()
         query = "select * from peer where sessionid = '%s'" %(SessionID)
         if(DB.queryDb(query) == 1):     #se il sessionid è presente
             data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
@@ -58,7 +58,7 @@ class MetodiDirectory:
 
     def Ricerca(pacchetto):
         SessionID = pacchetto[4:20]
-        ricerca = pacchetto[20:40].replace("|", "")
+        ricerca = pacchetto[20:40].strip()
         risposta = ""
         query = "select * from peer where sessionid = '%s'" %(SessionID)
         if(DB.queryDb(query) == 1):     #se il sessionid è presente
@@ -91,8 +91,7 @@ class MetodiDirectory:
                 while(len(nCopie) < 3):         #riempio gli eventuali bytes mancanti
                     nCopie = "0" + nCopie
                 nome = filename
-                while(len(nome) < 100):         #riempio gli eventuali bytes mancanti
-                    nome = "|" + nome
+                nome = nome.ljust(100)
                 risposta += md5 + nome + nCopie
                 query = "Select file.ipP2P, peer.pP2P from file, peer where peer.ipp2p = file.ipp2p AND file.md5 = '%s' AND file.filename = '%s'"%(md5, filename)
                 #print(query)
