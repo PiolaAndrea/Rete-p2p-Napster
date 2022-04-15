@@ -1,4 +1,4 @@
-import os
+    import os
 import socket
 from random import *
 import hashlib
@@ -10,6 +10,10 @@ class L_File:
         self.ipP2P = ipP2P
         self.pP2P = pP2P
 
+class Descrittore:
+    def __init__(self, md5, nome):
+        self.md5 = md5
+        self.nome = nome
 
 def Menu():
     print('Menù di scelta:')
@@ -72,3 +76,4 @@ def ScomponiRicerca(risposta):
         y = z      #sposto puntatore su ultimo carattere considerato
         k = y
     return files
+
