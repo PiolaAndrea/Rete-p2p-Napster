@@ -31,17 +31,20 @@ class MetodiPeer:
         pacchetto = "RETR" + md5
         return pacchetto
 
-    def Upload(md5, path, nomi_File):
+    def Upload(md5, path):
         listMd5 = []
+        nomi_File = []
         pacchetto = ("ARET").encode()
         try:
+            for filename in os.listdir(path):
+                nomi_File.append(filename)
             for filename in nomi_File:
                 listMd5.append(FindMd5(path, filename))   
-            indice = listMd5.index(md5)
+            indice = listMd5.index(md5)   #cerco indice nella lista
             file = open('%s/%s' %(path,nomi_File[indice]), 'rb')
             contenuto = file.read()
             file.close()
-            modulo = len(contenuto) % 4096
+            modulo = len(contenuto) % 4096   #per capire numero di chunk
             if modulo > 0:
                 nChunk = int((len(contenuto)/4096)) + 1
             else:
@@ -59,7 +62,7 @@ class MetodiPeer:
                 lenChunk.append(lunghezzaContenuto)
                 chunk.append(contenuto)
             else: 
-                ultimoChunk = lunghezzaContenuto % 4096
+                ultimoChunk = lunghezzaContenuto % 4096    #calcolo lunghezza ultimo chunk
                 while(len(str(ultimoChunk)) < 5):     #riempio gli eventuali bytes mancanti
                     ultimoChunk = "0" + str(ultimoChunk)
                 i = 0
