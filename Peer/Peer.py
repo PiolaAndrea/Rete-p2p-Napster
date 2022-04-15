@@ -1,6 +1,7 @@
 import socket
 import sys
 import os
+import psutil
 from random import *
 from MetodiPeer import *
 from Utility import *
@@ -13,9 +14,18 @@ ipIn = sys.argv[3]
 sessionId = '0000000000000000'
 nomi_File = []
 p = 0
-for filename in os.listdir(path):
-    nomi_File.append(filename)
 
+def killChild():
+    pid = None
+    if not pid:
+        pid = os.getpid()    #pid processo padre
+    try:
+        parent = psutil.Process(pid)
+    except psutil.Error:
+        # could not find parent process id
+        return
+    for child in parent.children(recursive=True):
+        child.kill()
 
 def FiglioUpload(p):
     sFiglio = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -29,7 +39,7 @@ def FiglioUpload(p):
             pacchetto = conn.recv(36).decode()
             if pacchetto[0:4] == "RETR":
                 fileMd5 = pacchetto[4:36]
-                risposta = MetodiPeer.Upload(fileMd5, path)         #creo pacchetto
+                risposta = MetodiPeer.Upload(fileMd5, nomi_File, path)         #creo pacchetto
                 if risposta == 'ERRO':
                     conn.send(risposta.encode())
                 else:      #invio pacchetto
@@ -72,16 +82,22 @@ while True:
         if(sessionId != '0000000000000000'): 
             nomi_File = []      
             for filename in os.listdir(path):
-                nomi_File.append(filename)
+                nomi_File.append(Descrittore(FindMd5(path,filename), filename))
                 s = openSocketConnection(hostname, porta)     #apro connessione con la socket
-                pacchetto = MetodiPeer.Aggiungi(sessionId, filename, path)     #creo pacchetto
+                filename = nomi_File[len(nomi_File)-1].nome
+                md5 = nomi_File[len(nomi_File)-1].md5
+                pacchetto = MetodiPeer.Aggiungi(sessionId, filename, md5)     #creo pacchetto
                 s.send(pacchetto.encode())
                 risposta = s.recv(7).decode()
                 n_copie = int(risposta[4:7])
                 if(risposta[0:4] == "AADD"):
                     print('Il file %s ha %s copie' %(filename, str(n_copie)))
                 else:
-                    print("Ops! Qualcosa è andato storto!")   
+                    print("Ops! Qualcosa è andato storto!")
+            killChild()
+            pid = os.fork()
+            if pid == 0:
+                FiglioUpload(p)   
             s.close()        #chiudo connessione con la socket
         else:
             print("È necessario prima fare il login")
@@ -89,15 +105,24 @@ while True:
      
     elif(selezione == '2'):        #rimozione
         if(sessionId != '0000000000000000'):   
-            nome_File = input('Inserire il nome del file da eliminare: ')    
-            if (nome_File in nomi_File):                #CONTROLLARE FILE NON PRESENTI NELLA PROPRIA CARTELLA
-                s = openSocketConnection(hostname, porta)     #apro connessione con la socket
-                pacchetto = MetodiPeer.Rimuovi(sessionId, nome_File, path)   #creo pacchetto
-                nomi_File.remove(nome_File)
-                s.send(pacchetto.encode())
+            nome_File = input('Inserire il nome del file da eliminare: ')
+            exist = False
+            for i in range(len(nomi_File)-1):    
+                if nome_File == nomi_File[i].nome:                #CONTROLLARE FILE NON PRESENTI NELLA PROPRIA CARTELLA
+                    s = openSocketConnection(hostname, porta)     #apro connessione con la socket
+                    pacchetto = MetodiPeer.Rimuovi(sessionId, nomi_File[i].md5)   #creo pacchetto
+                    nomi_File.pop(i)    #cancellazione per indice
+                    s.send(pacchetto.encode())
+                    exist = True
+                    break
+            if(exist == True):
                 risposta = s.recv(7).decode()
                 s.close()        #chiudo connessione con la socket
                 n_copie = int(risposta[4:7])
+                killChild()
+                pid = os.fork()
+                if pid == 0:
+                    FiglioUpload(p)
                 if(risposta[0:4] == "ADEL"):
                     print('Il file %s ha %s copie nel database' %(nome_File, str(n_copie)))
                 else:
