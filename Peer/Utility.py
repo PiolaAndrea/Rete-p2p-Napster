@@ -76,4 +76,3 @@ def ScomponiRicerca(risposta):
         y = z      #sposto puntatore su ultimo carattere considerato
         k = y
     return files
-
