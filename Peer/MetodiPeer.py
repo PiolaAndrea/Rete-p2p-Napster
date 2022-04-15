@@ -9,16 +9,11 @@ class MetodiPeer:
         pacchetto = 'LOGI'+ip+ str(p) 
         return pacchetto
 
-    def Aggiungi(sessionId, filename, path):   
-        md5 = FindMd5(path,filename)
+    def Aggiungi(sessionId, filename, md5):   
         filename.ljust(100)
         return ('ADDF'+sessionId+md5+filename)
 
-    def Rimuovi(sessionId, nomeFile, path):
-        file = open('%s/%s' %(path,nomeFile), 'rb')
-        contenuto = file.read()
-        file.close()
-        md5 = str(hashlib.md5(contenuto).hexdigest())
+    def Rimuovi(sessionId, md5):
         pacchetto = 'DELF' + sessionId + md5
         return pacchetto
 
@@ -31,17 +26,17 @@ class MetodiPeer:
         pacchetto = "RETR" + md5
         return pacchetto
 
-    def Upload(md5, path):
-        listMd5 = []
-        nomi_File = []
+    def Upload(md5, nomi_File, path):
         pacchetto = ("ARET").encode()
         try:
-            for filename in os.listdir(path):
-                nomi_File.append(filename)
-            for filename in nomi_File:
-                listMd5.append(FindMd5(path, filename))   
-            indice = listMd5.index(md5)   #cerco indice nella lista
-            file = open('%s/%s' %(path,nomi_File[indice]), 'rb')
+            indice = -1
+            for i in range(len(nomi_File)):
+                if nomi_File[i].md5 == md5:
+                    indice = i
+                    break
+            if indice == -1:
+                return "ERRO"
+            file = open('%s/%s' %(path,nomi_File[indice].nome), 'rb')
             contenuto = file.read()
             file.close()
             modulo = len(contenuto) % 4096   #per capire numero di chunk
@@ -51,6 +46,7 @@ class MetodiPeer:
                 nChunk = int(len(contenuto)/4096)
             while (len(str(nChunk))) < 6:
                 nChunk = "0" + str(nChunk)
+            nChunk = str(nChunk)
             pacchetto += nChunk.encode()
             lenChunk = []
             chunk = []
@@ -70,13 +66,16 @@ class MetodiPeer:
                     lenChunk.append("04096")
                     chunk.append(contenuto[i:i+4096])
                     i += 4096
-                lenChunk.append(ultimoChunk)
-                chunk.append(contenuto[i:i+int(ultimoChunk)])
+                if ultimoChunk != 0:
+                    lenChunk.append(ultimoChunk)
+                    chunk.append(contenuto[i:i+int(ultimoChunk)])
             for j in range(len(chunk)):
                 pacchetto += lenChunk[j].encode() + chunk[j]
             return pacchetto
         except:
             return 'ERRO'
+
+
         
     def Logout(sessionId):
             pacchetto = 'LOGO' + sessionId
