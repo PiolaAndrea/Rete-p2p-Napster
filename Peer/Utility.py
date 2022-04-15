@@ -1,4 +1,4 @@
-    import os
+import os
 import socket
 from random import *
 import hashlib
