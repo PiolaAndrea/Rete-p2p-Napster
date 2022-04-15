@@ -26,7 +26,6 @@ class MetodiDirectory:
 
     def Aggiunta(pacchetto):
         SessionID = pacchetto[4:20]
-        #SessionID = '6338084801094733'
         md5 = pacchetto[20:52]
         filename = pacchetto[52:152].strip()
         query = "select * from peer where sessionid = '%s'" %(SessionID)
@@ -69,7 +68,6 @@ class MetodiDirectory:
             query = "Select DISTINCT (md5, filename) from file where filename LIKE '%" + ricerca + "%'"
             listResult = DB.queryRicerca(query)
             for file in listResult:
-                #print(file)
                 result = file.split(",")
                 listFile.append(result[0])
                 listFile.append(result[1])
@@ -79,12 +77,9 @@ class MetodiDirectory:
             elif len(str(idmd5)) == 1:
                 risposta = "AFIN00" + str(idmd5)
             i = 0
-            #print(len(listFile))
             while i < len(listFile):
                 md5 = listFile[i]
-                #print(md5)
                 filename = listFile[i+1]
-                #print(filename)
                 query = "Select * from file where md5 = '%s' AND filename = '%s'" %(md5, filename)
                 nCopie = DB.queryDb(query)
                 nCopie = str(nCopie)
@@ -94,10 +89,8 @@ class MetodiDirectory:
                 nome = nome.ljust(100)
                 risposta += md5 + nome + nCopie
                 query = "Select file.ipP2P, peer.pP2P from file, peer where peer.ipp2p = file.ipp2p AND file.md5 = '%s' AND file.filename = '%s'"%(md5, filename)
-                #print(query)
                 risultati = DB.queryRicerca(query)
                 for row in risultati:
-                    #print(row)
                     risultato = row.split(",")
                     ipP2P = risultato[0]
                     pP2P = risultato[1]
@@ -143,7 +136,7 @@ class MetodiDirectory:
             caratteriDaSostituire = "[]', "
             for carattere in caratteriDaSostituire:
                 nDownload = nDownload.replace(carattere, "")
-            while(len(nDownload) < 3):     #riempio gli eventuali bytes mancanti
+            while(len(nDownload) < 5):     #riempio gli eventuali bytes mancanti
                 nDownload = "0" + nDownload
             risposta = "ARRE" + nDownload
             return risposta
@@ -155,7 +148,6 @@ class MetodiDirectory:
         if(DB.queryDb(query) == 1):     #se il sessionid è presente
             query = "Delete from file where ipp2p = (Select ipp2p from peer where sessionid = '%s')" %(SessionID)
             nFileEliminati = str(DB.queryDb(query))     #ritorno numero file Eliminati
-            #query = "Delete from peer where ipp2p = (Select ipp2p from peer where sessionid = '%s') AND pp2p = (Select pp2p from peer where sessionid = '%s')" %(SessionID, SessionID)
             query = []
             data = str(datetime.today().strftime('%Y-%m-%d %H:%M'))
             query.append("INSERT INTO log (ipp2p, operazione, data) VALUES((Select ipp2p from peer where sessionid = '%s'), 'logout', '%s')" %(SessionID, data))
