@@ -10,6 +10,7 @@ class L_File:
         self.ipP2P = ipP2P
         self.pP2P = pP2P
 
+
 def Menu():
     print('Menù di scelta:')
     print('1) Aggiunta')
