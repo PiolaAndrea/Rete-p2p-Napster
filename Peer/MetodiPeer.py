@@ -80,3 +80,5 @@ class MetodiPeer:
     def Logout(sessionId):
             pacchetto = 'LOGO' + sessionId
             return pacchetto
+
+        
