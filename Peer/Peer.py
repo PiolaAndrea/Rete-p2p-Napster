@@ -14,16 +14,11 @@ ipIn = sys.argv[3]
 sessionId = '0000000000000000'
 nomi_File = []
 p = 0
+pidPadre = os.getpid()
+
 
 def killChild():
-    pid = None
-    if not pid:
-        pid = os.getpid()    #pid processo padre
-    try:
-        parent = psutil.Process(pid)
-    except psutil.Error:
-        # could not find parent process id
-        return
+    parent = psutil.Process(pidPadre)
     for child in parent.children(recursive=True):
         child.kill()
 
@@ -54,6 +49,7 @@ def FiglioUpload(p):
                             break
             os._exit(1)
         conn.close()
+
 
 s = openSocketConnection(hostname, porta)    #apro connessione con la socket
 pacchetto = MetodiPeer.Login(CalcolaIp(ipIn))
@@ -107,7 +103,7 @@ while True:
         if(sessionId != '0000000000000000'):   
             nome_File = input('Inserire il nome del file da eliminare: ')
             exist = False
-            for i in range(len(nomi_File)-1):    
+            for i in range(len(nomi_File)):    
                 if nome_File == nomi_File[i].nome:                #CONTROLLARE FILE NON PRESENTI NELLA PROPRIA CARTELLA
                     s = openSocketConnection(hostname, porta)     #apro connessione con la socket
                     pacchetto = MetodiPeer.Rimuovi(sessionId, nomi_File[i].md5)   #creo pacchetto
@@ -227,4 +223,3 @@ while True:
     
     else:
         print("Errore nell' inserimento dell' istruzione")
-
