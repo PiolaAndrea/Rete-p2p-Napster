@@ -1,3 +1,4 @@
+//Guida DB
 //installare postgres
 sudo apt-get update
 sudo apt install postgresql postgresql-contrib
